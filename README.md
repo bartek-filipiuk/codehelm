@@ -1,11 +1,6 @@
 # claude-ui
 
-```
-  ___ _     _   _ ___ ___  ___       _   _ ___
- / __| |   /_\ | | \ \ __|       | | | |_ _|
-| (__| |__/ _ \| |_| | _| ___ | |_| || |
- \___|____/_/ \_\___/|___|     \___/|___|
-```
+![claude-ui banner](screens/banner.webp)
 
 A local-only command center for your Claude Code CLI sessions.
 One Chromium window. Every project. Every session. A real shell in
