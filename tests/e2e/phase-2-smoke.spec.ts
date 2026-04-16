@@ -87,7 +87,7 @@ test.beforeEach(async ({ page }) => {
   const res = await page.request.get(`http://127.0.0.1:${port}/api/auth?k=${token}`, {
     maxRedirects: 0,
   });
-  expect(res.status()).toBe(302);
+  expect(res.status()).toBe(200);
 });
 
 test('widzę 5 projektów z fixture', async ({ page }) => {

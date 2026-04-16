@@ -41,7 +41,9 @@ beforeAll(async () => {
   csrfValue = csrf.split('=')[1] ?? '';
   // warmup
   for (let i = 0; i < 10; i++) {
-    const warm = await fetch(`${server.baseUrl}/api/claude-md`, { headers: { Cookie: authCookie } });
+    const warm = await fetch(`${server.baseUrl}/api/claude-md`, {
+      headers: { Cookie: authCookie },
+    });
     if (warm.status === 200) break;
     await new Promise((r) => setTimeout(r, 300));
   }

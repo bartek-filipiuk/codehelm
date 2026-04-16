@@ -40,24 +40,26 @@ afterAll(async () => {
 });
 
 describe('GET /api/auth', () => {
-  it('302 + ustawia cookie dla poprawnego tokena', async () => {
+  it('200 HTML + ustawia cookie dla poprawnego tokena', async () => {
     const res = await fetch(`${server.baseUrl}/api/auth?k=${server.token}`, {
       redirect: 'manual',
     });
-    expect(res.status).toBe(302);
+    // HTML redirect (not 302): Chromium --app drops cookies across 302.
+    expect(res.status).toBe(200);
+    expect(res.headers.get('content-type')).toContain('text/html');
+    const body = await res.text();
+    // Meta + JS redirect to bare "/" (no token in URL or body).
+    expect(body).toMatch(/location\.replace\("\/"\)/);
+    expect(body).not.toContain(server.token);
+
     const cookies = res.headers.getSetCookie();
     const auth = cookies.find((c) => c.startsWith('claude_ui_auth='));
     const csrf = cookies.find((c) => c.startsWith('claude_ui_csrf='));
     expect(auth).toBeDefined();
     expect(auth).toMatch(/HttpOnly/i);
-    expect(auth).toMatch(/SameSite=Strict/i);
+    expect(auth).toMatch(/SameSite=lax/i);
     expect(csrf).toBeDefined();
-    // CSRF cookie deliberately NOT HttpOnly (JS reads it for header).
     expect(csrf).not.toMatch(/HttpOnly/i);
-    // Next may expand Location to absolute URL; accept both forms.
-    const loc = res.headers.get('location') ?? '';
-    expect(loc === '/' || loc.endsWith('/')).toBe(true);
-    expect(loc).not.toContain('?k=');
   });
 
   it('401 dla złego tokena', async () => {

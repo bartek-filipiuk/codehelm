@@ -86,7 +86,7 @@ test('placeholder strona widoczna po auth', async ({ page, context }) => {
   const authRes = await page.request.get(`http://127.0.0.1:${port}/api/auth?k=${token}`, {
     maxRedirects: 0,
   });
-  expect(authRes.status()).toBe(302);
+  expect(authRes.status()).toBe(200);
 
   const cookies = await context.cookies();
   const hasAuth = cookies.some((c) => c.name === 'claude_ui_auth');

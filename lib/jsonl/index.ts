@@ -111,10 +111,35 @@ async function collectSessionFiles(dir: string): Promise<SessionSummary[]> {
 
 async function sniffResolvedCwd(filePath: string | null): Promise<string | null> {
   if (!filePath) return null;
+  // Real Claude Code sessions embed huge hook attachments in the first few
+  // events (skill docs, CLAUDE.md, etc), so the event carrying `cwd` often
+  // lives beyond any fixed byte cutoff. Scan the first MAX_LINES events,
+  // regardless of size. Also falls back to a raw `"cwd":"/..."` regex if
+  // Zod rejects a line (new event types we don't schematise yet).
+  const MAX_LINES = 200;
   try {
-    const stream = createReadStream(filePath, { encoding: 'utf8', end: 4096 });
-    for await (const ev of parseJsonlStream(stream, { logMalformed: false })) {
-      if (typeof ev.cwd === 'string' && ev.cwd.startsWith('/')) return ev.cwd;
+    const stream = createReadStream(filePath, { encoding: 'utf8' });
+    let line = 0;
+    let raw = '';
+    for await (const chunk of stream) {
+      raw += chunk;
+      let nl: number;
+      while ((nl = raw.indexOf('\n')) !== -1) {
+        const one = raw.slice(0, nl);
+        raw = raw.slice(nl + 1);
+        line++;
+        if (line > MAX_LINES) {
+          stream.destroy();
+          return null;
+        }
+        // Fast path: raw regex on the line — avoids Zod overhead and works
+        // for event shapes the schema doesn't recognise yet.
+        const m = /"cwd"\s*:\s*"(\/[^"\\]*(?:\\.[^"\\]*)*)"/.exec(one);
+        if (m) {
+          stream.destroy();
+          return m[1] ?? null;
+        }
+      }
     }
   } catch {
     // ignore

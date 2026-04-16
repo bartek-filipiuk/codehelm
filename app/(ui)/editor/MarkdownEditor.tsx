@@ -34,14 +34,19 @@ export function MarkdownEditor() {
     if (!hostRef.current) return;
     let cancelled = false;
     (async () => {
-      const [{ EditorView, keymap, lineNumbers }, { EditorState }, { markdown }, { oneDark }, { defaultKeymap, history, historyKeymap }] =
-        await Promise.all([
-          import('@codemirror/view'),
-          import('@codemirror/state'),
-          import('@codemirror/lang-markdown'),
-          import('@codemirror/theme-one-dark'),
-          import('@codemirror/commands'),
-        ]);
+      const [
+        { EditorView, keymap, lineNumbers },
+        { EditorState },
+        { markdown },
+        { oneDark },
+        { defaultKeymap, history, historyKeymap },
+      ] = await Promise.all([
+        import('@codemirror/view'),
+        import('@codemirror/state'),
+        import('@codemirror/lang-markdown'),
+        import('@codemirror/theme-one-dark'),
+        import('@codemirror/commands'),
+      ]);
       if (cancelled || !hostRef.current) return;
 
       const updateListener = EditorView.updateListener.of((u) => {
@@ -143,7 +148,10 @@ export function MarkdownEditor() {
           </Button>
         </div>
         <div className="flex items-center gap-2">
-          <span className="truncate font-mono text-[10px] text-neutral-500" title={query.data?.path}>
+          <span
+            className="truncate font-mono text-[10px] text-neutral-500"
+            title={query.data?.path}
+          >
             {query.data?.path ?? ''}
           </span>
           {dirty && <span className="text-[10px] text-amber-400">● unsaved</span>}
@@ -155,8 +163,8 @@ export function MarkdownEditor() {
       </div>
       {conflict && (
         <div className="border-b border-amber-800 bg-amber-900/30 px-3 py-2 text-xs text-amber-200">
-          Plik zmienił się na dysku. Kliknij &quot;Reload&quot; aby pobrać najnowszą wersję (stracisz
-          bieżące edycje).
+          Plik zmienił się na dysku. Kliknij &quot;Reload&quot; aby pobrać najnowszą wersję
+          (stracisz bieżące edycje).
           <Button size="sm" variant="outline" className="ml-2" onClick={() => query.refetch()}>
             Reload
           </Button>
