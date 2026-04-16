@@ -1,316 +1,392 @@
 # claude-ui
 
-Lokalny web UI do zarządzania sesjami Claude Code CLI. Zastępuje żonglowanie
-wieloma oknami terminala — wszystkie projekty, historia konwersacji
-i interaktywny shell w jednej zakładce Chromium.
+```
+  ___ _     _   _ ___ ___  ___       _   _ ___
+ / __| |   /_\ | | \ \ __|       | | | |_ _|
+| (__| |__/ _ \| |_| | _| ___ | |_| || |
+ \___|____/_/ \_\___/|___|     \___/|___|
+```
 
-Zero chmury. Zero dodatkowych kosztów API. Bindowanie tylko na
-`127.0.0.1`, pełny stack obronny włącznie z CSP, CSRF double-submit,
-path-guardem i audit logiem. Multi-tab terminal z `node-pty`, live updates
-przez chokidar, edytor `CLAUDE.md` z CodeMirror 6, conflict detection
-i atomic write.
+A local-only command center for your Claude Code CLI sessions.
+One Chromium window. Every project. Every session. A real shell in
+every tab. Zero cloud. Zero extra API cost. And a security model that
+treats `127.0.0.1` like the attack surface it actually is.
 
-Zbudowany z `Next.js 15` App Router, custom HTTP/WS serwera, `xterm.js`,
-`react-virtuoso`, Zod, TanStack Query.
+> Built as a defense-in-depth exercise on top of Next.js 15. Eight phases,
+> 230+ unit/integration tests, 18 end-to-end specs, zero `npm audit`
+> findings, one tightly-scoped PTY multiplexer.
 
 ---
 
 ## Screenshots
 
-**Sidebar + historia sesji z tool_use / tool_result inline**
+**Session history. Markdown, tool_use cards, tool_result with diffs, all
+virtualised and searchable.**
 
 ![History view](screens/history.png)
 
-**Multi-tab terminal z `claude --resume` i zwykłym shellem**
+**Multi-tab terminal. `claude --resume <id>` is one click.**
 
 ![Shell view](screens/shell.png)
 
-**Rozbijanie bloków tool_use na expandowalne karty + syntax highlight**
+**Tool calls expand into inline, syntax-highlighted cards. No more
+`[tool_use]` placeholders.**
 
 ![Tools view](screens/tools.png)
 
 ---
 
-## Co to jest
+## Why it exists
 
-Claude Code CLI zapisuje każdą sesję jako plik JSONL w
-`~/.claude/projects/<slug>/<sessionId>.jsonl`. Im dłużej używasz CLI,
-tym więcej tych sesji zbiera się w terminalu — ciężko wrócić do
-poprzedniej, trudno znaleźć coś konkretnego, jeszcze trudniej uruchomić
-kilka równolegle bez tmuxowej akrobatyki.
+Claude Code writes every session as an append-only JSONL file under
+`~/.claude/projects/<slug>/<sessionId>.jsonl`. After a month of heavy use
+you have fifty projects and hundreds of sessions scattered across a
+directory tree you'll never open by hand. Finding "that one session where
+I made Claude debug the PTY race" means `grep -r` through 800 MB of JSONL.
 
-`claude-ui` daje jeden widok:
+The CLI is great for one session at a time. It stops being great at 20.
 
-- **Lewa kolumna** — wszystkie projekty z `~/.claude/projects/` z licznikiem
-  sesji, ostatnią aktywnością, search, ręcznie nadawane aliasy.
-- **Środkowa kolumna** — lista sesji wybranego projektu (preview, rozmiar,
-  liczba wiadomości, timestamp relatywny).
-- **Prawa kolumna** — trzy tryby przełączane w locie:
-  - *Historia* — progressive streaming JSONL, 8 typów eventów renderowanych
-    osobno (user, assistant markdown, tool_use, tool_result, thinking,
-    system, attachment, permission-mode). Virtualizacja `react-virtuoso`,
-    Shiki dla code blocks, `react-markdown` + `rehype-sanitize` dla XSS-safe
-    assistant content. Search z nawigacją, filtry po kategoriach
-    (User / Assistant / Tools / System), tryb "tylko trafienia".
-  - *Terminal* — wielokartkowy (max 16), każdy tab żyje w swoim PTY
-    (`node-pty`), scrollback zachowany przy przełączaniu. "+ shell"
-    odpala bash w cwd projektu, "▶ resume w terminalu" wpisuje za Ciebie
-    `claude --resume <id>`.
-  - *CLAUDE.md* — CodeMirror 6, podmiana globalny ↔ per-project, atomic
-    write z rename, detekcja konfliktu przez `If-Unmodified-Since`.
-
-Live updates: chokidar obserwuje `~/.claude/projects/` i pushuje przez
-WebSocket zmiany — gdy CLI zapisze nowy event, lista sesji i viewer
-odświeżają się natychmiast bez klikania.
+`claude-ui` is the missing front-end. It reads the JSONL you already
+have, spawns PTYs via `node-pty`, watches the directory with `chokidar`,
+and hands you a viewer, a multi-tab terminal, and a Markdown editor for
+`CLAUDE.md`. Everything happens in-process, on `127.0.0.1`, behind a
+one-shot token you never see.
 
 ---
 
-## Security model (realny, nie marketing)
+## At a glance
 
-Aplikacja działa na `127.0.0.1` i obsługuje bash PTY z pełnymi uprawnieniami
-Twojego konta. To jest zdalne wykonanie kodu dla każdego, kto przejmie
-sesję. Stąd pełny wielowarstwowy defense-in-depth:
+| Area               | What you get                                                  |
+| ------------------ | ------------------------------------------------------------- |
+| Projects sidebar   | Auto-discovered from `~/.claude/projects/`, aliasable, search |
+| Session list       | Preview, size, message count, relative mtime                  |
+| Viewer             | Streaming JSONL, virtualised, 9 event types, search + filters |
+| Terminal           | Up to 16 concurrent PTYs, backpressure, SIGHUP teardown       |
+| CLAUDE.md editor   | CodeMirror 6, atomic write, `If-Unmodified-Since` conflict    |
+| Live updates       | chokidar → WebSocket → TanStack Query invalidation            |
+| Auth               | Ephemeral port + 32B token + HttpOnly cookie + CSRF           |
+| CSP                | Per-request nonce, `strict-dynamic`, no `unsafe-inline`       |
+| Path traversal     | `fs.realpath` + prefix equality (fuzz-tested, 100 payloads)   |
+| Audit log          | Whitelisted fields only, 0600 file, 0700 dir                  |
 
-**Bind i dostęp**
-- `server.listen({ host: '127.0.0.1' })` — nigdy `0.0.0.0`
-- Losowy port ephemeral (49152–65535) generowany per-run
-- 32-bajtowy token z `crypto.randomBytes`, nowy przy każdym starcie
+---
 
-**Token flow**
-- `?k=TOKEN` tylko w URL launchera (zawsze `bin/claude-ui`, nigdy w
-  historii przeglądarki — `/api/auth` zwraca HTML z JS redirect zamiast
-  302, dzięki czemu cookie commituje się przed nawigacją do `/`)
-- Weryfikacja przez `crypto.timingSafeEqual`
-- Po sukcesie: `claude_ui_auth` cookie HttpOnly + SameSite=Lax (Lax a nie
-  Strict bo Chromium w trybie `--app=` drops Strict na pierwszej
-  nawigacji — CSRF kompensowany niżej)
-- `Referrer-Policy: no-referrer` globalnie
+## Security model (stated plainly)
 
-**CSRF**
-- Double-submit: drugie cookie `claude_ui_csrf` (NIE HttpOnly, JS je
-  czyta i wstawia do `x-csrf-token` headera)
-- Weryfikacja z `timingSafeEqual` na każdym `POST`/`PUT`/`PATCH`/`DELETE`
-- Dla WebSocket: pierwsze wiadomość musi zawierać `csrf: <value>`,
-  inaczej connection zamyka się z code 1008
+This application runs a login-shell PTY at the user's full privilege
+level. If someone reaches the socket, they have your box. The security
+model reflects that.
 
-**DNS rebinding / Origin**
-- Host header allowlist (tylko `127.0.0.1:PORT` i `localhost:PORT`)
-- Origin check na każdym WS upgrade
-- Rebind ataku nie łyka nawet jeśli cookie by wyciekło
+**Reachability**
 
-**CSP**
-- Per-request nonce w Next edge middleware (`middleware.ts`)
-- `script-src 'nonce-<x>' 'strict-dynamic'` — bez `unsafe-inline`
-- `'unsafe-eval'` aktywne **tylko w dev mode** (HMR Next.js) — prod strict
-- `object-src 'none'`, `frame-ancestors 'none'`, `base-uri 'self'`
+- Listens on `127.0.0.1` only. Never `0.0.0.0`.
+- Random ephemeral port chosen per run (49152–65535).
+- 32-byte token from `crypto.randomBytes`, rotated on every start.
+- Token rides in the launcher URL exactly once; `/api/auth` returns a
+  200 HTML page with a JS redirect (instead of a 302) so the cookie
+  is committed before the browser leaves the auth endpoint —
+  Chromium in `--app=` mode drops Strict cookies across the boundary
+  otherwise.
+- `Referrer-Policy: no-referrer` globally.
 
-**Path guard (krytyczne)**
-- Każda ścieżka z user inputu idzie przez `lib/security/path-guard.ts`
-- Rozwiązuje symlinki (`fs.realpath`) i weryfikuje prefix:
-  `resolved === root || resolved.startsWith(root + path.sep)`
-- Fuzz 100 payloadów w unit testach (URL-encoded, null bytes, UTF-8 tricks,
-  symlink escape, prefix collision typu `/root/.claudeEVIL`)
-- Dla CLAUDE.md dodatkowo: resolved path MUSI być literalnie
-  `<dir>/CLAUDE.md` — blokuje zapis do `settings.json`, `CLAUDE.md.bak`,
-  nested subdirs
+**Request authentication**
 
-**PTY**
-- `node-pty` z cap 16 jednoczesnych PTY per instancja
-- Rate limit 10 spawnów / minutę (token bucket)
-- Backpressure: client ACKuje co 64 kB, serwer pauzuje PTY przy 1 MB
-  unacked (zapobiega OOM przy `cat bigfile`)
-- cwd walidowane przez path-guard — spawn poza `$HOME` odrzucany
-- SIGHUP przy close, SIGKILL fallback po 5 s
+- `claude_ui_auth` cookie: HttpOnly, SameSite=Lax, Path=/.
+- `claude_ui_csrf` cookie: readable by JS, paired with an
+  `x-csrf-token` header. Double-submit on every unsafe method.
+- All comparisons are `crypto.timingSafeEqual`.
+- WebSocket upgrade checks cookie + Origin; the first WS message must
+  echo the CSRF value or the connection closes with code 1008.
 
-**Audit log** (`~/.claude/claude-ui/audit.log`, mode 0600, parent 0700)
-- Whitelist pól: `ts, event, sessionId, pid, cwd, shell, cols, rows,
-  path, bytes, writeKind`
-- **Nigdy** nie zapisuje: env vars, tokenów, cookie, treści wiadomości,
-  stdout/stderr
-- Logger pino z `redact: ['token', 'authorization', 'cookie', '*.env']`
+**Browser hardening**
 
-**Resource limits**
-- PUT CLAUDE.md: 1 MB (413 Payload Too Large)
-- Rendered JSONL field w UI: 10 MB truncate z "show more"
-- JSONL streaming przez `ReadableStream` — nigdy pełny plik do RAM
+- `Host` header allowlist — only `127.0.0.1:PORT` and `localhost:PORT`
+  pass. Defeats DNS rebinding even if the cookie ever leaked.
+- `Origin` check on every WS upgrade.
+- CSP generated per-request in `middleware.ts` with a fresh nonce.
+  `script-src 'nonce-<x>' 'strict-dynamic'`. No `unsafe-inline`.
+  `'unsafe-eval'` lives only in dev (Next HMR requires it); production
+  builds are strict.
+- `object-src 'none'`, `frame-ancestors 'none'`, `base-uri 'self'`,
+  `X-Frame-Options: DENY`, `COOP/CORP: same-origin`.
+
+**Filesystem**
+
+- Every user-supplied path goes through `lib/security/path-guard.ts`.
+  It resolves symlinks via `fs.realpath` and then enforces
+  `resolved === root || resolved.startsWith(root + sep)`.
+- 100 traversal payloads in unit tests: URL-encoded, double-encoded,
+  null bytes, UTF-8 fullwidth dots, symlink escape, the infamous
+  `/root/.claudeEVIL` prefix collision.
+- `CLAUDE.md` has a stricter rule: the resolved path must be exactly
+  `<dir>/CLAUDE.md`. Nothing else. No `.bak`, no nested dirs, no
+  `settings.json` via alias games.
+
+**Processes**
+
+- `node-pty` manager caps at 16 concurrent PTYs.
+- Spawn rate limit: 10 / minute (token bucket).
+- Backpressure: client ACKs every 64 KB, server pauses the PTY when
+  unacked traffic exceeds 1 MB. `cat huge-file` cannot OOM the server.
+- `cwd` is path-guarded against `$HOME`.
+- SIGHUP on tab close, SIGKILL fallback after 5 seconds.
+
+**Audit log** (`~/.claude/claude-ui/audit.log`, `mode 0600`, dir `0700`)
+
+Whitelisted keys only: `ts, event, sessionId, pid, cwd, shell, cols,
+rows, path, bytes, writeKind`. Never env, never tokens, never content,
+never `stdout`/`stderr`. The pino logger redacts `token`, `authorization`,
+`cookie`, and `*.env` at emit time.
+
+**Resource caps**
+
+- `PUT /api/claude-md`: 1 MB hard limit → 413.
+- Rendered JSONL field in the UI: 10 MB truncate with "show more".
+- Session streaming uses `ReadableStream` — the full file is never
+  loaded into memory.
 
 **Chromium profile**
-- `$XDG_RUNTIME_DIR/claude-ui-<uid>-<uuid>/` z `mode 0700` (tmpfs, auto
-  cleanup przy wylogowaniu)
-- Fallback do `/tmp/claude-ui-<uid>-<uuid>/` mode 0700 gdy brak XDG
-- Cleanup na SIGTERM/SIGINT/SIGHUP (trap w `bin/claude-ui`)
+
+- `$XDG_RUNTIME_DIR/claude-ui-<uid>-<uuid>/`, `mode 0700`, tmpfs,
+  auto-cleared at logout.
+- Fallback to `/tmp/claude-ui-<uid>-<uuid>/`, also 0700.
+- Trap on `SIGTERM`/`SIGINT`/`SIGHUP` in `bin/claude-ui` removes the
+  profile on exit.
 
 **Shutdown**
-- SIGTERM killuje wszystkie PTY, zamyka watcher, flush log, exit ≤ 10 s
 
-**Co NIE jest chronione**
-- Scenariusze gdy Twoje konto jest już skompromitowane (keylogger,
-  hijack chrome profile). To jest wyraźnie poza scope.
-- Multi-user — to jest tool lokalny dla jednego usera.
+- `SIGTERM` kills every PTY, stops the chokidar watcher, flushes the
+  audit log, closes the HTTP server. Total budget ≤ 10 seconds.
 
-Testy pokrywają każdą z tych warstw (unit + integration + playwright
-security suite). `pnpm audit --prod --audit-level=high` zwraca zero.
+**Out of scope — stated on purpose**
+
+- Scenarios where your account is already compromised (keylogger, Chrome
+  profile exfiltrated, attacker logged in as you). There is no defense
+  against a local attacker with your shell.
+- Multi-user. This is a single-user tool.
+- Running on a public IP. If you expose it, you own the consequences —
+  at minimum put it behind Tailscale with ACLs or a reverse proxy doing
+  mTLS.
+
+Each layer above is test-covered. `pnpm audit --prod --audit-level=high`
+returns zero.
 
 ---
 
 ## Quick start
 
-```bash
-# wymagania: Node 20.11+, pnpm 9+, Chromium albo Google Chrome
-# Linux testowane na Ubuntu 22.04+; macOS/Windows poza scope v1
+Requirements: Node 20.11+, pnpm 9+, Chromium or Google Chrome. Linux
+tested on Ubuntu 22.04+; macOS and Windows are out of scope for v1.
 
+```bash
 git clone https://github.com/bartek-filipiuk/claude-ui.git
 cd claude-ui
 pnpm install
 ./bin/claude-ui
 ```
 
-Skrypt:
-1. znajduje wolny port na `127.0.0.1`,
-2. generuje 32-bajtowy token,
-3. spawnuje Next.js serwer (`tsx server.ts`) w tle,
-4. czeka aż `/api/healthz` zwróci 200,
-5. tworzy dedykowany profil Chromium w `$XDG_RUNTIME_DIR`,
-6. odpala `chromium --app=http://127.0.0.1:PORT/?k=TOKEN --user-data-dir=<profile>`.
+The launcher will:
 
-Ctrl+C w terminalu lub zamknięcie okna Chromium → cleanup wszystkich PTY
-+ profilu + exit.
+1. Find a free ephemeral port on `127.0.0.1`.
+2. Generate a 32-byte token.
+3. Spawn the Next.js server with `tsx server.ts` in the background.
+4. Poll `/api/healthz` until it returns 200.
+5. Create a dedicated Chromium profile under `$XDG_RUNTIME_DIR`.
+6. Open `chromium --app=http://127.0.0.1:PORT/?k=TOKEN --user-data-dir=<profile>`.
 
-### Zmienne środowiskowe
+`Ctrl+C` in the terminal (or closing the Chromium window) tears down
+every PTY, removes the profile directory, and exits cleanly.
 
-- `CLAUDE_UI_CHROMIUM=/path/to/chrome` — override auto-detect
-- `LOG_LEVEL=debug` — szczegółowe logi pino (default `info`)
+Environment variables:
+
+- `CLAUDE_UI_CHROMIUM=/path/to/chrome` — override auto-detect.
+- `LOG_LEVEL=debug` — verbose pino output. Default is `info`.
 
 ---
 
-## Architektura
+## Architecture
 
 ```
 bin/claude-ui (node launcher)
-  find port, gen token, spawn server, spawn chromium --app
-      |
-      v
-server.ts (custom http.Server)
-  middleware:  Host allowlist -> auth cookie -> CSRF
-  Next handler: app/api/*, app/page.tsx
-  upgrade:     /_next/* -> Next HMR
-               /api/ws/pty -> pty-channel
-               /api/ws/watch -> watch-channel
+  find port → gen token → spawn server → poll /healthz → spawn chromium --app
+      │
+      ▼
+server.ts (custom http.Server, 127.0.0.1 bind)
+  pipeline: Host allowlist → auth cookie → CSRF → Next handler
+  upgrade:  /_next/*        → Next HMR WS
+            /api/ws/pty     → lib/ws/pty-channel
+            /api/ws/watch   → lib/ws/watch-channel
 
-middleware.ts (Next edge)
-  per-request CSP nonce injected into request header (x-nonce)
-  propagated to Next's inline scripts automatically
+middleware.ts (Next edge, nonce only)
+  per-request base64 nonce
+  propagated via x-nonce to Next's inline scripts
 
 lib/
-  security/    token, csrf, host-check, path-guard (realpath), csp, nonce
-  server/      config, port finder, logger (pino redact), audit, middleware
-  jsonl/       Zod schemas for 9 event types, readline parser, listProjects,
-               slug encode/decode, Markdown export, in-session search
-  pty/         cap+rate-limit+backpressure manager, spawn wrapper, audit
-  watcher/     chokidar singleton, metadata-only events, depth/symlink guard
-  ws/          upgrade router, pty-channel (Zod protocol + flow control),
-               watch-channel (batched push)
-  claude-md/   write-guard (byte-exact CLAUDE.md invariant), atomic io
-  aliases/     JSON map (slug -> alias), atomic write
+├── security/    token, csrf, host-check, path-guard (realpath), csp, nonce
+├── server/      config, port finder, logger (pino redact), audit, middleware
+├── jsonl/       Zod schemas (9 types), readline parser, listProjects,
+│                slug codec, Markdown export, in-session search
+├── pty/         singleton manager (cap + rate + backpressure), spawn,
+│                audit facade
+├── watcher/     chokidar singleton, debounce 200ms, depth 2, no symlinks
+├── ws/          upgrade router, pty-channel (Zod wire protocol + flow
+│                control), watch-channel (batched push, 100ms / 50 ev)
+├── claude-md/   write-guard (byte-exact CLAUDE.md invariant), atomic io
+└── aliases/     slug → alias map, atomic JSON write
 
 app/
-  layout.tsx, page.tsx
-  (ui)/sidebar/         Search, ProjectList
-  (ui)/session-explorer/ SessionList, ProjectHeader (rename inline)
-  (ui)/conversation/    Viewer (virtuoso), MainPanel (mode switcher)
-  (ui)/terminal/        Terminal (xterm), TabBar, TabManager
-  (ui)/editor/          MarkdownEditor (CodeMirror 6)
-  api/
-    auth, healthz
-    projects, projects/[slug]/sessions, projects/aliases (GET/PATCH)
-    sessions/[id], sessions/[id]/export, sessions/new
-    claude-md, claude-md/[slug]
+├── layout.tsx, page.tsx
+├── (ui)/sidebar/         Search, ProjectList
+├── (ui)/session-explorer/ SessionList, ProjectHeader (rename inline)
+├── (ui)/conversation/    Viewer (virtuoso), MainPanel (mode switcher)
+├── (ui)/terminal/        Terminal (xterm), TabBar, TabManager
+├── (ui)/editor/          MarkdownEditor (CodeMirror 6)
+└── api/
+    ├── auth, healthz
+    ├── projects, projects/[slug]/sessions, projects/aliases (GET/PATCH)
+    ├── sessions/[id], sessions/[id]/export, sessions/new
+    └── claude-md, claude-md/[slug]
 
-hooks/
-  use-projects, use-sessions, use-session-stream, use-pty, use-watch,
-  use-open-session, use-claude-md, use-aliases
-
-stores/  (zustand)
-  ui-slice          selected project/session, search, mode flags
-  terminal-slice    tabs (max 16), active, open/close/setActive
+hooks/  use-projects, use-sessions, use-session-stream, use-pty, use-watch,
+        use-open-session, use-claude-md, use-aliases
+stores/ ui-slice, terminal-slice (zustand)
 ```
+
+---
+
+## Design principles
+
+- **Boundary over trust.** Every input crossing a trust boundary is
+  validated, even ones from "our own" client. If you wouldn't accept
+  it from a stranger, you don't accept it from yourself either.
+- **Narrow the blast radius.** Caps, rate limits, and backpressure
+  everywhere. A bug in the UI should not become a way to take down
+  the server.
+- **Audit what matters, nothing else.** The log answers "what happened"
+  without leaking "what was said". Fields are whitelisted, not
+  blacklisted.
+- **Keep the CLI authoritative.** This is a viewer and a launcher. It
+  never rewrites JSONL, never mutates session state, never invents
+  its own session format. Claude Code stays the source of truth.
+- **No magic.** Custom server, explicit middleware, explicit CSP.
+  If a request is unauthorised, the rejection is visible in the logs
+  the next second.
 
 ---
 
 ## Tests
 
 ```bash
-pnpm test          # vitest unit + integration (220+ tests)
-pnpm test:e2e      # playwright (18+ specs across phases 0..7)
+pnpm test          # vitest unit + integration (230+ tests)
+pnpm test:e2e      # playwright (18 specs across phases 0..7)
 pnpm audit         # pnpm audit --prod --audit-level=high (zero)
-pnpm lint          # eslint strict, no eval/Function/dangerouslySetInnerHTML
+pnpm lint          # strict eslint, bans eval/Function/dangerouslySetInnerHTML
 pnpm typecheck     # tsc --noEmit
 pnpm build         # Next standalone + custom server
 ```
 
-Coverage obejmuje:
-- fuzz 100 path-traversal payloadów
-- CSRF replay / tampered tokens
-- Host rebinding (`Host: evil.com` -> 403)
-- WS Origin reject, cookie reject
-- PTY cap, rate limit, backpressure, audit log content check
-- JSONL parser dla 9 typów eventów + malformed line skip
-- atomic CLAUDE.md write, If-Unmodified-Since conflict
-- chokidar symlink guard, batched push throttle
-- XSS w assistant markdown (rehype-sanitize), tool_result stdout
-- e2e: spawn terminala + echo, resume claude, live updates w sesji
+What the suite actually proves:
+
+- Path-guard survives 100 traversal payloads.
+- CSRF rejects missing / tampered / replayed tokens.
+- `Host: evil.com` returns 403 regardless of cookie presence.
+- WS upgrade without Origin or cookie returns 403.
+- PTY cap of 16 enforced; spawn rate-limit kicks in at 11/minute.
+- Backpressure pauses a `yes`-flooding PTY before memory spikes.
+- JSONL parser tolerates all 9 known event types and skips malformed
+  lines without losing position.
+- Atomic `CLAUDE.md` write keeps old content visible throughout the
+  write window; `If-Unmodified-Since` mismatch returns 412.
+- Chokidar ignores symlinks leaving the projects dir; bursty appends
+  coalesce through the 200 ms per-file debounce.
+- `<script>alert(1)</script>` in an assistant message renders as text.
+  The playwright dialog listener catches zero alerts.
+- End-to-end: spawn a shell, type `echo hello`, see `hello` in xterm.
+  Resume a session, get `claude --resume <id>` typed for you. Append
+  a JSONL line in the background, the sidebar updates without a click.
 
 ---
 
-## Phases (historia rozwoju)
+## Phases
 
-| Tag             | Zakres                                          |
+Development happened in eight security-gated phases. Each tag is a
+release marker with a passing gate suite.
+
+| Tag             | Scope                                           |
 | --------------- | ----------------------------------------------- |
-| phase-0-done    | Fundament: security primitives + launcher + CI  |
-| phase-1-done    | Backend: JSONL parser + 4 REST endpointy        |
-| phase-2-done    | Sidebar + Session Explorer                      |
-| phase-3-done    | Conversation Viewer + Shiki + sanitize          |
-| phase-4-done    | WebSocket + node-pty + pojedynczy terminal      |
+| phase-0-done    | Foundation: security primitives + launcher + CI |
+| phase-1-done    | Backend: JSONL parser + four REST endpoints     |
+| phase-2-done    | Sidebar + session explorer                      |
+| phase-3-done    | Conversation viewer + Shiki + sanitization      |
+| phase-4-done    | WebSocket + node-pty + single terminal          |
 | phase-5-done    | Multi-tab + `claude --resume` spawn             |
 | phase-6-done    | File watcher + live updates                     |
 | phase-7-done    | CodeMirror 6 + atomic write                     |
 
 ---
 
+## Non-goals
+
+This is what `claude-ui` explicitly does **not** try to do:
+
+- Send prompts through its own API. The embedded terminal is the
+  prompting interface.
+- Sync state between machines. Run one instance per host.
+- Authenticate multiple users. Single user on a trusted machine.
+- Ship a mobile UI. Desktop-first.
+- Replace the CLI. If `claude` changes its JSONL format, this project
+  adapts — the CLI doesn't adapt to us.
+- Work as a public web service. If you're reading this as a howto for
+  putting it on the internet, stop.
+
+---
+
 ## Roadmap
 
-Backlog usprawnień w [IMPROVEMENTPLAN.md](IMPROVEMENTPLAN.md).
-Aktywna kolejka w [TASKS.md](TASKS.md) — pobierana przez automatyczny
-scheduler, każdy job implementuje pierwszy nieoznaczony task i odhacza
-checkbox.
+The full backlog lives in [IMPROVEMENTPLAN.md](IMPROVEMENTPLAN.md),
+bucketed by value/cost. The active queue in [TASKS.md](TASKS.md) is
+consumed by an autonomous nightly scheduler that picks the next
+unchecked task, implements it under the same test discipline, commits,
+and checks the box. See the top of that file for the protocol.
+
+Active fronts:
+
+- Settings modal (fonts, density, theme).
+- Command palette (`Ctrl+K`) for instant project / session / action.
+- Resizable columns with persistent layout.
+- Session outline / minimap for long conversations.
+- Diff view for `Edit` / `Write` tool results.
+- Speculative: a conversation DAG, a cost estimator, a replay mode
+  for post-mortems.
 
 ---
 
 ## Development
 
 ```bash
-pnpm dev                    # HMR dev server
-pnpm exec playwright install chromium
-pnpm test:watch             # vitest interactive
+pnpm dev                               # HMR dev server
+pnpm exec playwright install chromium  # once
+pnpm test:watch                        # vitest interactive
 ```
 
-Repozytorium ma strict TypeScript, strict ESLint (`eval`, `Function`,
-`dangerouslySetInnerHTML` z literal string — wszystkie zabronione
-z project-wide lint rule), prettier z Polish localization w niektórych
-user-facing stringach i husky pre-commit.
+Strict TypeScript, strict ESLint with project-wide bans on `eval`,
+`new Function`, and `dangerouslySetInnerHTML` fed from user data.
+Prettier. Husky pre-commit. Conventional commits.
 
-Custom server.ts siedzi obok Next-a, nie zastępuje go — Next obsługuje
-App Router i HMR, my przejmujemy tylko HTTP upgrade dla WS i middleware
-stack przed `app.getRequestHandler()`.
+The custom `server.ts` runs alongside Next rather than replacing it —
+Next owns the App Router and HMR, this server owns the HTTP pipeline
+and WebSocket upgrades. Every request runs through the middleware
+stack (`Host` → auth → CSRF) before Next ever sees it.
 
 ---
 
 ## License
 
-MIT (TBD — dodaj LICENSE.md jeśli potrzebne).
+MIT — see [LICENSE](LICENSE) when added. Until then, treat as
+all-rights-reserved with permission for personal use.
 
 ---
 
-Built for local-only use. Nie wystawiaj na publiczny adres bez drugiej
-warstwy uwierzytelniania (np. reverse proxy z mTLS, Tailscale z ACL).
-Default security model zakłada że `127.0.0.1` jest zaufanym boundary.
+Built for local-only use. Treat `127.0.0.1` as the trust boundary.
+If you need remote access, put Tailscale in front of it or don't do it
+at all. The threat model stops where the socket binds.
