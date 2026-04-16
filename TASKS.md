@@ -63,7 +63,7 @@ next `[ ]`. Never reorder or delete tasks — only check them off.
 
 ### T04 — Sort toggle in sidebar
 
-- [ ] **Goal:** dropdown in sidebar header: "Last activity" (default) /
+- [x] **Goal:** dropdown in sidebar header: "Last activity" (default) /
   "Name" (alias or path) / "Session count".
 - **Touch:** `app/(ui)/sidebar/ProjectList.tsx`, small `Select`
   component in `components/ui/select.tsx` (Radix-based if not present —
