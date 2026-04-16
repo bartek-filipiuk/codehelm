@@ -100,7 +100,7 @@ next `[ ]`. Never reorder or delete tasks — only check them off.
 
 ### T07 — Session outline / minimap
 
-- [ ] **Goal:** narrow column right of the viewer showing a marker per
+- [x] **Goal:** narrow column right of the viewer showing a marker per
   event (colored by category, height ≈ content length). Click jumps.
 - **Touch:** new `app/(ui)/conversation/Outline.tsx`, mount in `Viewer`
   next to `Virtuoso`. Virtuoso's `scrollToIndex` already accessible.
