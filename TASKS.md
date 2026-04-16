@@ -75,7 +75,7 @@ next `[ ]`. Never reorder or delete tasks — only check them off.
 
 ### T05 — Keyboard shortcuts overlay
 
-- [ ] **Goal:** press `?` anywhere → modal listing all shortcuts.
+- [x] **Goal:** press `?` anywhere → modal listing all shortcuts.
 - **Touch:** new `components/HelpOverlay.tsx`, register in
   `components/providers.tsx`. Dialog via Radix (`@radix-ui/react-dialog`
   already installed).
