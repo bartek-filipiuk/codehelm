@@ -24,7 +24,7 @@ next `[ ]`. Never reorder or delete tasks — only check them off.
 
 ### T01 — Resolve-cwd fallback for legacy projects
 
-- [ ] **Goal:** projects without a sniffable `resolvedCwd` still let
+- [x] **Goal:** projects without a sniffable `resolvedCwd` still let
   the user open `+ claude` / `+ shell`. Today 24/54 real projects
   return `no_resolved_cwd` → 409.
 - **Touch:** `lib/jsonl/index.ts` (`listProjects`, new helper
