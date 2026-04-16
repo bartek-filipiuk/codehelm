@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { usePty, type PtyStatus } from '@/hooks/use-pty';
+import { useSettings } from '@/hooks/use-settings';
 
 export interface TerminalProps {
   cwd: string;
@@ -23,6 +24,8 @@ export function Terminal({ cwd, shell, args, initCommand }: TerminalProps) {
   const resizeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const initSentRef = useRef(false);
   const [status, setStatus] = useState<PtyStatus>('closed');
+  const { data: settings } = useSettings();
+  const fontSize = settings?.terminalFontSize ?? 13;
   const { connect, write, resize, close } = usePty({
     onData: (chunk) => termRef.current?.write(chunk),
     onExit: ({ exitCode }) => {
@@ -54,7 +57,7 @@ export function Terminal({ cwd, shell, args, initCommand }: TerminalProps) {
         convertEol: false,
         cursorBlink: true,
         fontFamily: 'ui-monospace, Menlo, Consolas, monospace',
-        fontSize: 13,
+        fontSize,
         theme: {
           background: '#0a0a0a',
           foreground: '#e5e5e5',
@@ -118,6 +121,19 @@ export function Terminal({ cwd, shell, args, initCommand }: TerminalProps) {
     obs.observe(hostRef.current);
     return () => obs.disconnect();
   }, []);
+
+  // React to font-size changes from settings without re-mounting xterm.
+  useEffect(() => {
+    const term = termRef.current;
+    if (!term) return;
+    if (term.options.fontSize === fontSize) return;
+    term.options.fontSize = fontSize;
+    try {
+      fitRef.current?.fit();
+    } catch {
+      /* ignore */
+    }
+  }, [fontSize]);
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-neutral-950">

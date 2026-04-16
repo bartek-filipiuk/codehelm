@@ -6,6 +6,7 @@ import { useState, type ReactNode } from 'react';
 import { useWatch } from '@/hooks/use-watch';
 import { HelpOverlay } from '@/components/HelpOverlay';
 import { CommandPalette } from '@/components/CommandPalette';
+import { SettingsApplier } from '@/components/SettingsApplier';
 
 function WatcherSubscriber() {
   useWatch();
@@ -28,6 +29,7 @@ export function Providers({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={client}>
       <TooltipProvider delayDuration={200}>
+        <SettingsApplier />
         <WatcherSubscriber />
         {children}
         <HelpOverlay />

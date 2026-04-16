@@ -94,7 +94,13 @@ export function Viewer() {
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <div
+      className="flex h-full min-h-0 flex-col"
+      style={{
+        fontSize: 'var(--ui-viewer-font-size, 14px)',
+        lineHeight: 'var(--ui-viewer-line-height, 1.5)',
+      }}
+    >
       <div className="flex items-center gap-2 border-b border-neutral-800 bg-neutral-950 px-4 py-2">
         <div className="relative flex-1">
           <Input
