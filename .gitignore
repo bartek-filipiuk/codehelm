@@ -1,0 +1,47 @@
+# dependencies
+node_modules
+.pnpm-store
+
+# next.js
+.next
+out
+next-env.d.ts
+
+# builds
+dist
+build
+
+# env
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# runtime
+*.log
+*.pid
+*.sock
+
+# playwright
+test-results
+playwright-report
+blob-report
+playwright/.cache
+
+# editors
+.vscode
+.idea
+*.swp
+.DS_Store
+
+# claude-ui runtime artifacts
+audit.log
+*.audit.log
+.claude-ui-profile-*
+
+# TypeScript incremental cache
+*.tsbuildinfo
+
+# coverage
+coverage
+.nyc_output

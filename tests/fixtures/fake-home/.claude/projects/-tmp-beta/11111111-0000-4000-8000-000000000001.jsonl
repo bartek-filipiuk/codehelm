@@ -1,0 +1,2 @@
+{"type":"user","sessionId":"11111111-0000-4000-8000-000000000001","uuid":"bu-1","timestamp":"2026-04-16T09:00:00.000Z","cwd":"/tmp/beta","message":{"role":"user","content":"Beta project search-target"}}
+{"type":"assistant","sessionId":"11111111-0000-4000-8000-000000000001","uuid":"ba-1","timestamp":"2026-04-16T09:00:01.000Z","cwd":"/tmp/beta","message":{"role":"assistant","content":[{"type":"text","text":"Beta answer"}]}}

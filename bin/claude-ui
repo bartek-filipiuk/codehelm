@@ -1,0 +1,199 @@
+#!/usr/bin/env node
+/* eslint-disable no-console */
+import { spawn, spawnSync } from 'node:child_process';
+import { mkdir, rm, chmod } from 'node:fs/promises';
+import { createServer } from 'node:net';
+import { randomBytes, randomUUID } from 'node:crypto';
+import { existsSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { request } from 'node:http';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const ROOT = resolve(__dirname, '..');
+
+const MIN_PORT = 49152;
+const MAX_PORT = 65535;
+
+async function findPort() {
+  for (let i = 0; i < 30; i++) {
+    const candidate = MIN_PORT + Math.floor(Math.random() * (MAX_PORT - MIN_PORT));
+    const ok = await tryBind(candidate);
+    if (ok) return candidate;
+  }
+  return osAssignedPort();
+}
+
+function tryBind(port) {
+  return new Promise((resolve) => {
+    const s = createServer();
+    s.once('error', () => resolve(false));
+    s.listen({ port, host: '127.0.0.1' }, () => {
+      s.close(() => resolve(true));
+    });
+  });
+}
+
+function osAssignedPort() {
+  return new Promise((resolve, reject) => {
+    const s = createServer();
+    s.once('error', reject);
+    s.listen({ port: 0, host: '127.0.0.1' }, () => {
+      const addr = s.address();
+      if (addr && typeof addr === 'object') {
+        const port = addr.port;
+        s.close(() => resolve(port));
+      } else {
+        s.close(() => reject(new Error('cannot obtain port')));
+      }
+    });
+  });
+}
+
+async function pickProfileDir() {
+  const base = process.env['XDG_RUNTIME_DIR'] ?? process.env['TMPDIR'] ?? '/tmp';
+  const uid = process.getuid ? process.getuid() : 'anon';
+  const dir = join(base, `claude-ui-${uid}-${randomUUID()}`);
+  await mkdir(dir, { recursive: true, mode: 0o700 });
+  await chmod(dir, 0o700);
+  return dir;
+}
+
+function findChromium() {
+  const candidates = [
+    process.env['CLAUDE_UI_CHROMIUM'],
+    'chromium',
+    'chromium-browser',
+    'google-chrome-stable',
+    'google-chrome',
+  ].filter(Boolean);
+  for (const cmd of candidates) {
+    const path = tryWhich(cmd);
+    if (path) return path;
+  }
+  throw new Error(
+    'Chromium/Chrome not found. Install chromium or set CLAUDE_UI_CHROMIUM=/path/to/chrome.',
+  );
+}
+
+function tryWhich(cmd) {
+  const res = spawnSync('which', [cmd], { encoding: 'utf8' });
+  if (res.status === 0) {
+    const out = (res.stdout ?? '').trim();
+    if (out) return out;
+  }
+  return null;
+}
+
+function waitForHealth(port, attempts = 100, intervalMs = 100) {
+  return new Promise((resolveFn, rejectFn) => {
+    let left = attempts;
+    const retry = () => {
+      if (--left <= 0) rejectFn(new Error('health check timed out'));
+      else setTimeout(tick, intervalMs);
+    };
+    const tick = () => {
+      const req = request(
+        { host: '127.0.0.1', port, path: '/api/healthz', method: 'GET' },
+        (res) => {
+          if (res.statusCode === 200) {
+            res.resume();
+            resolveFn();
+          } else {
+            res.resume();
+            retry();
+          }
+        },
+      );
+      req.once('error', retry);
+      req.setTimeout(500, () => req.destroy());
+      req.end();
+    };
+    tick();
+  });
+}
+
+async function main() {
+  const port = await findPort();
+  const token = randomBytes(32).toString('hex');
+
+  const env = {
+    ...process.env,
+    PORT: String(port),
+    CLAUDE_UI_TOKEN: token,
+    HOST: '127.0.0.1',
+  };
+
+  const isDev = process.env['NODE_ENV'] !== 'production';
+  const cmd = isDev ? 'pnpm' : 'node';
+  const args = isDev ? ['exec', 'tsx', 'server.ts'] : ['server.js'];
+
+  const server = spawn(cmd, args, {
+    cwd: ROOT,
+    env,
+    stdio: ['ignore', 'inherit', 'inherit'],
+  });
+
+  const profileDir = await pickProfileDir();
+  let chromeProc = null;
+  let exiting = false;
+
+  const cleanup = async (signal, code = 0) => {
+    if (exiting) return;
+    exiting = true;
+    try {
+      if (chromeProc && !chromeProc.killed) chromeProc.kill('SIGTERM');
+    } catch {}
+    try {
+      if (server && !server.killed) server.kill('SIGTERM');
+    } catch {}
+    try {
+      if (existsSync(profileDir)) await rm(profileDir, { recursive: true, force: true });
+    } catch (err) {
+      console.error('cleanup error:', err.message);
+    }
+    process.exit(code);
+  };
+
+  process.on('SIGTERM', () => cleanup('SIGTERM'));
+  process.on('SIGINT', () => cleanup('SIGINT'));
+  process.on('SIGHUP', () => cleanup('SIGHUP'));
+
+  server.on('exit', (code) => {
+    if (!exiting) console.error(`server exited with code ${code ?? 'null'}`);
+    cleanup('server-exit', code ?? 1);
+  });
+
+  try {
+    await waitForHealth(port);
+  } catch (err) {
+    console.error('server did not become healthy:', err.message);
+    await cleanup('health-fail', 1);
+    return;
+  }
+
+  const chromium = findChromium();
+  const url = `http://127.0.0.1:${port}/api/auth?k=${token}`;
+  chromeProc = spawn(
+    chromium,
+    [
+      `--app=${url}`,
+      `--user-data-dir=${profileDir}`,
+      '--no-first-run',
+      '--no-default-browser-check',
+      '--disable-features=TranslateUI',
+    ],
+    { stdio: 'ignore', detached: false },
+  );
+
+  chromeProc.on('exit', () => {
+    cleanup('chrome-exit', 0);
+  });
+
+  console.error(`claude-ui ready → http://127.0.0.1:${port}`);
+}
+
+main().catch((err) => {
+  console.error('claude-ui fatal:', err.message);
+  process.exit(1);
+});

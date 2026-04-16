@@ -1,0 +1,94 @@
+{
+  "name": "claude-ui",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local web UI for managing Claude Code CLI sessions",
+  "bin": {
+    "claude-ui": "./bin/claude-ui"
+  },
+  "scripts": {
+    "dev": "tsx server.ts",
+    "build": "next build && cp server.ts .next/standalone/ 2>/dev/null || true",
+    "start": "NODE_ENV=production tsx server.ts",
+    "lint": "eslint . --max-warnings 0",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:unit": "vitest run tests/unit",
+    "test:integration": "vitest run tests/integration",
+    "test:e2e": "playwright test tests/e2e",
+    "test:security": "playwright test tests/security",
+    "test:all": "pnpm test:unit && pnpm test:integration && pnpm test:e2e",
+    "audit": "pnpm audit --prod --audit-level=high",
+    "prepare": "husky || true"
+  },
+  "engines": {
+    "node": ">=20.11.0",
+    "pnpm": ">=9"
+  },
+  "dependencies": {
+    "@codemirror/lang-markdown": "^6.3.0",
+    "@codemirror/state": "^6.5.0",
+    "@codemirror/theme-one-dark": "^6.1.2",
+    "@codemirror/view": "^6.35.0",
+    "@homebridge/node-pty-prebuilt-multiarch": "^0.12.0",
+    "@tanstack/react-query": "^5.62.0",
+    "@xterm/addon-canvas": "^0.7.0",
+    "@xterm/addon-fit": "^0.10.0",
+    "@xterm/addon-web-links": "^0.11.0",
+    "@xterm/xterm": "^5.5.0",
+    "chokidar": "^4.0.1",
+    "next": "^15.0.0",
+    "pino": "^9.5.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-markdown": "^9.0.1",
+    "react-virtuoso": "^4.12.0",
+    "rehype-sanitize": "^6.0.0",
+    "shiki": "^1.24.0",
+    "tailwindcss": "^4.0.0",
+    "ws": "^8.18.0",
+    "zod": "^3.23.8",
+    "zustand": "^5.0.1"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3.2.0",
+    "@playwright/test": "^1.49.0",
+    "@tailwindcss/postcss": "^4.0.0",
+    "@types/node": "^22.10.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@types/supertest": "^6.0.2",
+    "@types/ws": "^8.5.13",
+    "@vitest/ui": "^2.1.8",
+    "eslint": "^9.16.0",
+    "eslint-config-next": "^15.0.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.2.10",
+    "pino-pretty": "^13.0.0",
+    "prettier": "^3.4.0",
+    "supertest": "^7.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0",
+    "vitest": "^2.1.8"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx}": [
+      "prettier --write",
+      "eslint --fix"
+    ],
+    "*.{json,md,yml,yaml}": [
+      "prettier --write"
+    ]
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@homebridge/node-pty-prebuilt-multiarch",
+      "esbuild",
+      "sharp",
+      "unrs-resolver"
+    ]
+  }
+}

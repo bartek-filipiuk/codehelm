@@ -1,0 +1,2 @@
+{"type":"user","sessionId":"00000000-0000-4000-8000-000000000002","uuid":"u-a","timestamp":"2026-04-15T11:00:00.000Z","cwd":"/tmp/alpha","message":{"role":"user","content":"Second session here"}}
+{"type":"assistant","sessionId":"00000000-0000-4000-8000-000000000002","uuid":"a-a","timestamp":"2026-04-15T11:00:01.000Z","cwd":"/tmp/alpha","message":{"role":"assistant","content":[{"type":"text","text":"OK"}]}}

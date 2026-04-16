@@ -1,0 +1,11 @@
+{"type":"user","sessionId":"00000000-0000-4000-8000-000000000001","uuid":"u-1","timestamp":"2026-04-15T10:00:00.000Z","cwd":"/tmp/alpha","gitBranch":"main","version":"2.1.0","userType":"external","entrypoint":"cli","isSidechain":false,"message":{"role":"user","content":"Hello there"},"promptId":"p-1"}
+{"type":"assistant","sessionId":"00000000-0000-4000-8000-000000000001","uuid":"a-1","timestamp":"2026-04-15T10:00:01.000Z","cwd":"/tmp/alpha","message":{"role":"assistant","content":[{"type":"text","text":"Hi, how can I help?"}],"stop_reason":"end_turn"},"requestId":"r-1"}
+{"type":"tool_use","sessionId":"00000000-0000-4000-8000-000000000001","uuid":"tu-1","timestamp":"2026-04-15T10:00:02.000Z","cwd":"/tmp/alpha","name":"Bash","id":"t-1","input":{"command":"ls"},"caller":"assistant"}
+{"type":"tool_result","sessionId":"00000000-0000-4000-8000-000000000001","uuid":"tr-1","timestamp":"2026-04-15T10:00:03.000Z","cwd":"/tmp/alpha","toolUseResult":{"stdout":"file1\nfile2\n","stderr":"","exitCode":0,"interrupted":false,"isImage":false}}
+{"type":"system","sessionId":"00000000-0000-4000-8000-000000000001","uuid":"s-1","timestamp":"2026-04-15T10:00:04.000Z","cwd":"/tmp/alpha","level":"info","slug":"hook-fired","subtype":"PreToolUse","hookCount":1}
+{"type":"attachment","sessionId":"00000000-0000-4000-8000-000000000001","uuid":"at-1","timestamp":"2026-04-15T10:00:05.000Z","cwd":"/tmp/alpha","hookName":"PostToolUse","hookEvent":"PostToolUse","command":"echo ok","stdout":"ok\n","stderr":"","durationMs":12,"exitCode":0}
+{"type":"queue-operation","sessionId":"00000000-0000-4000-8000-000000000001","uuid":"q-1","timestamp":"2026-04-15T10:00:06.000Z","cwd":"/tmp/alpha","operation":"enqueue"}
+{"type":"permission-mode","sessionId":"00000000-0000-4000-8000-000000000001","uuid":"pm-1","timestamp":"2026-04-15T10:00:07.000Z","cwd":"/tmp/alpha","mode":"default"}
+{"type":"file-history-snapshot","sessionId":"00000000-0000-4000-8000-000000000001","uuid":"fh-1","timestamp":"2026-04-15T10:00:08.000Z","cwd":"/tmp/alpha"}
+this-line-is-intentionally-malformed-not-json
+{"type":"user","sessionId":"00000000-0000-4000-8000-000000000001","uuid":"u-2","timestamp":"2026-04-15T10:00:09.000Z","cwd":"/tmp/alpha","message":{"role":"user","content":"Goodbye"}}
