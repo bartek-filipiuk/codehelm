@@ -87,7 +87,7 @@ next `[ ]`. Never reorder or delete tasks — only check them off.
 
 ### T06 — Command palette (Ctrl+K)
 
-- [ ] **Goal:** power-user switcher. Cmd shows recent projects, all
+- [x] **Goal:** power-user switcher. Cmd shows recent projects, all
   projects by alias, "New shell in current project", "Open CLAUDE.md
   (global)", "Open CLAUDE.md (current project)", "Close current tab".
 - **Touch:** `components/ui/command.tsx` is already shadcn `cmdk` — wrap
