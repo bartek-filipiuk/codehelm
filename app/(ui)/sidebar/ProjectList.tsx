@@ -1,11 +1,10 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useProjects, type ProjectSummary } from '@/hooks/use-projects';
-import { useAliases, useSetAlias } from '@/hooks/use-aliases';
+import { useAliases } from '@/hooks/use-aliases';
 import { useUiStore } from '@/stores/ui-slice';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { timeAgo } from '@/lib/ui/format';
@@ -70,95 +69,29 @@ function ProjectItem({
 }) {
   const path = project.resolvedCwd ?? project.displayPath;
   const primary = alias ?? path;
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(alias ?? '');
-  const setAlias = useSetAlias();
-
-  const startEdit = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setDraft(alias ?? '');
-    setEditing(true);
-  };
-  const commit = () => {
-    const value = draft.trim();
-    if (value === (alias ?? '')) {
-      setEditing(false);
-      return;
-    }
-    setAlias.mutate(
-      { slug: project.slug, alias: value === '' ? null : value },
-      { onSettled: () => setEditing(false) },
-    );
-  };
-
-  if (editing) {
-    return (
-      <li>
-        <div className="flex items-center gap-1 rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1">
-          <Input
-            autoFocus
-            value={draft}
-            placeholder={path}
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                commit();
-              } else if (e.key === 'Escape') {
-                e.preventDefault();
-                setEditing(false);
-              }
-            }}
-            className="h-7 flex-1 text-xs"
-            aria-label="Alias projektu"
-          />
-          <Button size="sm" variant="ghost" onClick={commit} disabled={setAlias.isPending}>
-            ✓
-          </Button>
-          <Button size="sm" variant="ghost" onClick={() => setEditing(false)}>
-            ✕
-          </Button>
-        </div>
-      </li>
-    );
-  }
-
   return (
     <li>
-      <div
+      <button
+        type="button"
+        onClick={onSelect}
+        title={`${alias ? alias + '\n' : ''}${path}\nslug: ${project.slug}`}
         className={cn(
-          'flex items-stretch rounded-md',
+          'flex w-full min-w-0 items-center justify-between gap-2 rounded-md px-3 py-2 text-left',
           active ? 'bg-neutral-800' : 'hover:bg-neutral-900',
         )}
       >
-        <button
-          type="button"
-          onClick={onSelect}
-          title={`${alias ? alias + '\n' : ''}${path}\nslug: ${project.slug}`}
-          className="flex min-w-0 flex-1 items-center justify-between gap-2 px-3 py-2 text-left"
-        >
-          <span className="min-w-0 flex-1 truncate">
-            {alias ? (
-              <span className="text-xs font-medium text-neutral-100">{primary}</span>
-            ) : (
-              <span className="font-mono text-xs text-neutral-300">{primary}</span>
-            )}
-          </span>
-          <span className="ml-2 inline-flex shrink-0 items-center gap-2 text-[10px] text-neutral-400">
-            <span>{project.sessionCount}</span>
-            <span>{timeAgo(project.lastActivity)}</span>
-          </span>
-        </button>
-        <button
-          type="button"
-          onClick={startEdit}
-          className="shrink-0 self-stretch rounded-md px-2 text-sm text-neutral-400 hover:bg-neutral-700 hover:text-neutral-100"
-          aria-label="Zmień alias projektu"
-          title="Zmień alias (alias ręczny)"
-        >
-          ✎
-        </button>
-      </div>
+        <span className="min-w-0 flex-1 truncate">
+          {alias ? (
+            <span className="text-xs font-medium text-neutral-100">{primary}</span>
+          ) : (
+            <span className="font-mono text-xs text-neutral-300">{primary}</span>
+          )}
+        </span>
+        <span className="ml-2 inline-flex shrink-0 items-center gap-2 text-[10px] text-neutral-400">
+          <span>{project.sessionCount}</span>
+          <span>{timeAgo(project.lastActivity)}</span>
+        </span>
+      </button>
     </li>
   );
 }

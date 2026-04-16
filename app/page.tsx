@@ -1,6 +1,7 @@
 import { Search } from './(ui)/sidebar/Search';
 import { ProjectList } from './(ui)/sidebar/ProjectList';
 import { SessionList } from './(ui)/session-explorer/SessionList';
+import { ProjectHeaderWrapper } from './(ui)/session-explorer/ProjectHeader';
 import { MainPanel } from './(ui)/conversation/MainPanel';
 
 export default function Page() {
@@ -20,6 +21,7 @@ export default function Page() {
         <header className="flex items-center justify-between border-b border-neutral-800 px-4 py-3">
           <h2 className="text-sm font-medium">Sesje</h2>
         </header>
+        <ProjectHeaderWrapper />
         <div className="min-h-0 flex-1">
           <SessionList />
         </div>
