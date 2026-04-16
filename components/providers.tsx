@@ -5,6 +5,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { useState, type ReactNode } from 'react';
 import { useWatch } from '@/hooks/use-watch';
 import { HelpOverlay } from '@/components/HelpOverlay';
+import { CommandPalette } from '@/components/CommandPalette';
 
 function WatcherSubscriber() {
   useWatch();
@@ -30,6 +31,7 @@ export function Providers({ children }: { children: ReactNode }) {
         <WatcherSubscriber />
         {children}
         <HelpOverlay />
+        <CommandPalette />
       </TooltipProvider>
     </QueryClientProvider>
   );
