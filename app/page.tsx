@@ -1,7 +1,7 @@
 import { Search } from './(ui)/sidebar/Search';
 import { ProjectList } from './(ui)/sidebar/ProjectList';
 import { SessionList } from './(ui)/session-explorer/SessionList';
-import { Viewer } from './(ui)/conversation/Viewer';
+import { MainPanel } from './(ui)/conversation/MainPanel';
 
 export default function Page() {
   return (
@@ -24,13 +24,8 @@ export default function Page() {
           <SessionList />
         </div>
       </section>
-      <main className="flex min-h-0 flex-col">
-        <header className="flex items-center justify-between border-b border-neutral-800 px-4 py-3">
-          <h2 className="text-sm font-medium">Historia</h2>
-        </header>
-        <div className="min-h-0 flex-1">
-          <Viewer />
-        </div>
+      <main className="min-h-0">
+        <MainPanel />
       </main>
     </div>
   );

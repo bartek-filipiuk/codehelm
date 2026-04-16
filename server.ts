@@ -4,6 +4,8 @@ import next from 'next';
 import { getServerPort, getServerToken } from '@/lib/server/config';
 import { logger } from '@/lib/server/logger';
 import { runMiddleware } from '@/lib/server/middleware';
+import { attachUpgradeRouter } from '@/lib/ws/server';
+import { ptyManager } from '@/lib/pty/manager';
 
 const dev = process.env['NODE_ENV'] !== 'production';
 
@@ -28,12 +30,7 @@ async function main(): Promise<void> {
     });
   });
 
-  // WS upgrade router will attach in phase 4. For now, gently close non-HMR upgrades.
-  httpServer.on('upgrade', (req, socket) => {
-    const url = req.url ?? '';
-    if (url.startsWith('/_next/')) return; // Next HMR handles its own
-    socket.destroy();
-  });
+  attachUpgradeRouter(httpServer);
 
   await new Promise<void>((resolve, reject) => {
     httpServer.once('error', reject);
@@ -47,6 +44,7 @@ async function main(): Promise<void> {
 
   const shutdown = (signal: string) => {
     logger.info({ signal }, 'shutting_down');
+    ptyManager.killAll('SIGTERM');
     httpServer.close(() => process.exit(0));
     setTimeout(() => process.exit(1), 10_000).unref();
   };

@@ -3,10 +3,11 @@ import { request } from 'node:http';
 import { createServer } from 'node:net';
 import { randomBytes } from 'node:crypto';
 import { resolve } from 'node:path';
+import { mkdtempSync, writeFileSync, mkdirSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { test, expect } from '@playwright/test';
 
 const ROOT = resolve(__dirname, '..', '..');
-const FAKE_HOME = resolve(ROOT, 'tests', 'fixtures', 'fake-home');
 
 function pickPort(): Promise<number> {
   return new Promise((resolveFn, rejectFn) => {
@@ -52,13 +53,41 @@ function waitHealth(port: number, timeoutMs = 20_000): Promise<void> {
   });
 }
 
+/**
+ * Phase-4 fixture needs a real project dir under $HOME with a JSONL that
+ * declares cwd = <that dir>. We build it in a tmp HOME so the Terminal can
+ * actually spawn $SHELL there (unlike /tmp/alpha in the shared fixture).
+ */
+function buildFakeHome() {
+  const home = mkdtempSync(`${tmpdir()}/claude-ui-phase4-`);
+  const projectDir = `${home}/proj`;
+  mkdirSync(projectDir, { recursive: true });
+  const slug = projectDir.replace(/\//g, '-');
+  const projectsDir = `${home}/.claude/projects/${slug}`;
+  mkdirSync(projectsDir, { recursive: true });
+  const sessionId = '00000000-0000-4000-8000-0000000000ab';
+  const jsonl =
+    JSON.stringify({
+      type: 'user',
+      sessionId,
+      uuid: 'u-1',
+      timestamp: '2026-04-15T10:00:00.000Z',
+      cwd: projectDir,
+      message: { role: 'user', content: 'phase 4 fixture' },
+    }) + '\n';
+  writeFileSync(`${projectsDir}/${sessionId}.jsonl`, jsonl);
+  return { home, projectDir };
+}
+
 let port: number;
 let token: string;
 let server: ChildProcess;
+let fake: ReturnType<typeof buildFakeHome>;
 
 test.beforeAll(async () => {
   port = await pickPort();
   token = randomBytes(32).toString('hex');
+  fake = buildFakeHome();
   server = spawn('pnpm', ['exec', 'tsx', 'server.ts'], {
     cwd: ROOT,
     env: {
@@ -68,7 +97,7 @@ test.beforeAll(async () => {
       HOST: '127.0.0.1',
       NODE_ENV: 'test',
       LOG_LEVEL: 'error',
-      HOME: FAKE_HOME,
+      HOME: fake.home,
     },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
@@ -90,51 +119,28 @@ test.beforeEach(async ({ page }) => {
   expect(res.status()).toBe(302);
 });
 
-test('otwieram sesję → widzę wiadomości', async ({ page }) => {
+test('otwieram terminal → widzę output shella', async ({ page }) => {
   await page.goto(`http://127.0.0.1:${port}/`);
-  await page.getByText('/tmp/alpha').click();
-  // First session tile, click it.
-  await page
-    .getByRole('button')
-    .filter({ hasText: /wiadomości/ })
-    .first()
-    .click();
-  // Expected: user "Hello there" from fixture.
-  await expect(page.getByText('Hello there')).toBeVisible();
-  // Assistant text from fixture.
-  await expect(page.getByText('Hi, how can I help?')).toBeVisible();
-  // Tool use Bash label.
-  await expect(page.getByText('Bash')).toBeVisible();
-});
+  await page.getByText(fake.projectDir).click();
+  await page.getByRole('button', { name: 'Terminal' }).click();
+  await expect(page.getByText('ready')).toBeVisible({ timeout: 10_000 });
 
-test('XSS w assistant content nie odpala alert', async ({ page }) => {
-  const alerts: string[] = [];
-  page.on('dialog', async (d) => {
-    alerts.push(d.message());
-    await d.dismiss();
+  // Xterm renders content inside a canvas/div — query by role textbox is
+  // unreliable. Instead: type into the terminal host (it has tabindex) and
+  // look for a bash prompt-like character.
+  const host = page.locator('.xterm').first();
+  await host.click();
+  await page.keyboard.type('echo hello-from-playwright\n');
+  await expect(page.locator('.xterm-rows')).toContainText('hello-from-playwright', {
+    timeout: 10_000,
   });
-  await page.goto(`http://127.0.0.1:${port}/`);
-  await page.getByText('/tmp/gamma').click();
-  await page
-    .getByRole('button')
-    .filter({ hasText: /wiadomości/ })
-    .first()
-    .click();
-  // The raw markdown contains <script>alert(1)</script> inside backticks.
-  await expect(page.getByText(/safe rendering/)).toBeVisible();
-  expect(alerts).toHaveLength(0);
 });
 
-test('search w sesji podświetla i nawiguje', async ({ page }) => {
+test('zamknięcie terminala przywraca viewer', async ({ page }) => {
   await page.goto(`http://127.0.0.1:${port}/`);
-  await page.getByText('/tmp/alpha').click();
-  await page
-    .getByRole('button')
-    .filter({ hasText: /wiadomości/ })
-    .first()
-    .click();
-  const searchBox = page.getByLabel('Szukaj w sesji');
-  await searchBox.fill('Hello');
-  // counter shows "1/N".
-  await expect(page.getByText(/^1\//)).toBeVisible();
+  await page.getByText(fake.projectDir).click();
+  await page.getByRole('button', { name: 'Terminal' }).click();
+  await expect(page.getByText('ready')).toBeVisible({ timeout: 10_000 });
+  await page.getByRole('button', { name: 'Zamknij terminal' }).click();
+  await expect(page.getByRole('heading', { name: 'Historia' })).toBeVisible();
 });
