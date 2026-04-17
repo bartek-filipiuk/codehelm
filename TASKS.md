@@ -189,7 +189,7 @@ next `[ ]`. Never reorder or delete tasks — only check them off.
 
 ### T14 — Cost estimator (effectful)
 
-- [ ] **Goal:** per-session and per-project estimated cost rollup based
+- [x] **Goal:** per-session and per-project estimated cost rollup based
   on `usage.input_tokens` / `usage.output_tokens` found in assistant
   events. Settings panel for per-model rates.
 - **Touch:** `lib/jsonl/usage.ts` (extract usage blocks), new column
