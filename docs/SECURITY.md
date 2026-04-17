@@ -1,145 +1,145 @@
 # Security — `claude-ui`
 
-## Kontekst i model zagrożeń
+## Context and threat model
 
-Aplikacja jest **lokalna** — binduje wyłącznie `127.0.0.1`, otwierana w Chromium jako `--app` window. Mimo to zakładamy realistyczne ataki lokalne:
+The app is **local** — it binds to `127.0.0.1` only and opens inside a Chromium `--app` window. Even so we assume realistic local attacks:
 
-- **Malicious strona w tle** w głównym browserze użytkownika próbuje dotrzeć do `http://127.0.0.1:PORT` przez fetch/XHR/WebSocket/SSRF.
-- **DNS rebinding** — atakująca strona pod kontrolowaną domeną zmienia swoje A-record na `127.0.0.1` i próbuje wywołać nasze API z cookie innej origin.
-- **Inny user na tej samej maszynie** (współdzielone serwery Linux, mało prawdopodobne u usera ale bronimy się bo darmowe) próbuje czytać profil chromium, socket, pliki stanowe.
-- **XSS w renderowanej treści JSONL** — tool output z `<script>`, markdown w assistant msg.
-- **Path traversal** przy walidacji slugów projektów i ścieżek sesji.
-- **Supply chain** — malicious dep injected przez npm.
+- **Malicious page in the user's main browser** trying to reach `http://127.0.0.1:PORT` via fetch / XHR / WebSocket / SSRF.
+- **DNS rebinding** — an attacker page under a controlled domain flips its A record to `127.0.0.1` and tries to call our API with a cookie from another origin.
+- **Another user on the same machine** (shared Linux servers, unlikely for our target user but cheap to defend against) trying to read the chromium profile, sockets, or state files.
+- **XSS in rendered JSONL content** — tool output containing `<script>`, markdown inside assistant messages.
+- **Path traversal** in project slugs and session paths.
+- **Supply chain** — a malicious dep injected via npm.
 
-**Nie atakujemy**: scenariuszy gdy użytkownik jest już skompromitowany (keylogger, chrome user data hijacked) — to wykracza poza nasz scope. Zakładamy że user ma czysty system.
+**Not in scope**: scenarios where the user is already compromised (keylogger, hijacked Chrome profile) — that's outside what a local tool can fix. We assume a clean host.
 
-## Stack obronny (rdzeń)
+## Defensive stack (core)
 
-| #   | Kontrola                                         | Implementacja                                                                                                   | Weryfikacja                                              |
-| --- | ------------------------------------------------ | --------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
-| 1   | Bind tylko 127.0.0.1                             | `server.listen({ host: '127.0.0.1', port })`                                                                    | `lsof -i :PORT` w CI                                     |
-| 2   | Ephemeral port                                   | `lib/server/port.ts` — losowy 49152-65535, retry przy TOCTOU                                                    | unit: 1000 iteracji bez collision                        |
-| 3   | Token rotation                                   | `crypto.randomBytes(32)`, nowy per-run, nie persist                                                             | integration: restart → stare cookie 401                  |
-| 4   | Token transport                                  | `?k=TOKEN` tylko w **launcher URL**, pierwszy request → HttpOnly+SameSite=Strict cookie + 302 do `/` bez `?k`   | test: access log nie zawiera `?k=`                       |
-| 5   | Timing-safe compare                              | `crypto.timingSafeEqual`                                                                                        | unit: różne długości → false bez rzutu                   |
-| 6   | Host allowlist                                   | middleware: odrzuca wszystko poza `127.0.0.1:PORT` i `localhost:PORT` (redirect)                                | integration: `Host: evil.com` → 403                      |
-| 7   | Origin check (WS)                                | `ws.on('upgrade', ...)` → sprawdź Origin header                                                                 | integration: wrong Origin → 403                          |
-| 8   | CSP nonce                                        | `lib/security/csp.ts` → `script-src 'nonce-...' 'strict-dynamic'`                                               | devtools + CI grep: brak `unsafe-inline` w script-src    |
-| 9   | CSRF double-submit                               | `lib/security/csrf.ts` — cookie `_csrf` + header `X-Csrf-Token`                                                 | integration: missing/tampered → 403                      |
-| 10  | Referrer-Policy                                  | `no-referrer` globalnie (next.config.ts)                                                                        | curl check response header                               |
-| 11  | Same-Origin headers                              | `COOP: same-origin`, `CORP: same-origin`, `X-Frame-Options: DENY`                                               | curl check                                               |
-| 12  | Path guard                                       | `lib/security/path-guard.ts` — `fs.realpath` + prefix check                                                     | unit: fuzz 100 payloadów bez escape                      |
-| 13  | Chromium profile                                 | `$XDG_RUNTIME_DIR/claude-ui/<uuid>` mode 0700                                                                   | test: `stat -c '%a'` == 700                              |
-| 14  | Cleanup profile                                  | SIGTERM/SIGINT trap w `bin/claude-ui`                                                                           | test: start + kill + katalog usunięty                    |
-| 15  | Rate limits                                      | token-bucket per session: PTY 10/min, REST 100/min, WS 500 msg/s                                                | integration: 11ty spawn → 429                            |
-| 16  | Body limits                                      | PUT CLAUDE.md: 1 MB (413), rendered JSONL field: 10 MB truncate                                                 | integration: 2 MB body → 413                             |
-| 17  | PTY cap                                          | 16 jednoczesnych, 17ty → rejected                                                                               | unit + integration                                       |
-| 18  | PTY backpressure                                 | client ACK co 64 kB, server pause przy 1 MB unacked                                                             | integration: `yes` w PTY → brak OOM                      |
-| 19  | Audit log whitelist                              | tylko `{ts, event, sessionId, pid, cwd, shell, cols, rows, path, bytes}` — **bez env, bez tokenów, bez treści** | grep w CI na `audit.log`                                 |
-| 20  | Logger redact                                    | pino `redact: ['token', 'authorization', 'cookie', '*.env']`                                                    | unit: serialized log nie zawiera tokena                  |
-| 21  | Graceful shutdown                                | SIGTERM → kill all PTY → flush log → exit                                                                       | test: `ps` post-shutdown, brak zombie                    |
-| 22  | Schema validation                                | Zod na wszystkich request bodies                                                                                | unit: invalid body → 400                                 |
-| 23  | Markdown sanitization                            | react-markdown + rehype-sanitize                                                                                | unit + playwright: `<script>` w assistant → escaped text |
-| 24  | Brak `eval`/`Function`/`dangerouslySetInnerHTML` | ESLint `no-restricted-syntax` rule                                                                              | lint w CI                                                |
-| 25  | `npm audit`                                      | `pnpm audit --prod --audit-level=high` w CI                                                                     | zielone w CI                                             |
+| #   | Control                                            | Implementation                                                                                                       | Verification                                          |
+| --- | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| 1   | Bind to 127.0.0.1 only                             | `server.listen({ host: '127.0.0.1', port })`                                                                         | `lsof -i :PORT` in CI                                 |
+| 2   | Ephemeral port                                     | `lib/server/port.ts` — random 49152-65535, retry on TOCTOU                                                           | unit: 1000 iterations without collision               |
+| 3   | Token rotation                                     | `crypto.randomBytes(32)`, fresh per-run, not persisted                                                               | integration: restart → old cookie 401                 |
+| 4   | Token transport                                    | `?k=TOKEN` only in the **launcher URL**; first request → HttpOnly + SameSite=Strict cookie + 302 to `/` without `?k` | test: access log does not contain `?k=`               |
+| 5   | Timing-safe compare                                | `crypto.timingSafeEqual`                                                                                             | unit: mismatched lengths → false without throwing     |
+| 6   | Host allowlist                                     | middleware rejects anything other than `127.0.0.1:PORT` and `localhost:PORT` (redirect)                              | integration: `Host: evil.com` → 403                   |
+| 7   | WS Origin check                                    | `ws.on('upgrade', ...)` validates the Origin header                                                                  | integration: wrong Origin → 403                       |
+| 8   | CSP nonce                                          | `lib/security/csp.ts` → `script-src 'nonce-...' 'strict-dynamic'`                                                    | devtools + CI grep: no `unsafe-inline` in script-src  |
+| 9   | CSRF double-submit                                 | `lib/security/csrf.ts` — cookie `_csrf` + header `X-Csrf-Token`                                                      | integration: missing/tampered → 403                   |
+| 10  | Referrer-Policy                                    | `no-referrer` globally (next.config.ts)                                                                              | curl check on response header                         |
+| 11  | Same-origin headers                                | `COOP: same-origin`, `CORP: same-origin`, `X-Frame-Options: DENY`                                                    | curl check                                            |
+| 12  | Path guard                                         | `lib/security/path-guard.ts` — `fs.realpath` + prefix check                                                          | unit: 100-payload fuzz without escape                 |
+| 13  | Chromium profile                                   | `$XDG_RUNTIME_DIR/claude-ui/<uuid>` mode 0700                                                                        | test: `stat -c '%a'` == 700                           |
+| 14  | Profile cleanup                                    | SIGTERM / SIGINT trap in `bin/claude-ui`                                                                             | test: start + kill + dir removed                      |
+| 15  | Rate limits                                        | per-session token-bucket: PTY 10/min, REST 100/min, WS 500 msg/s                                                     | integration: 11th spawn → 429                         |
+| 16  | Body limits                                        | PUT CLAUDE.md: 1 MB (413), rendered JSONL field: 10 MB truncate                                                      | integration: 2 MB body → 413                          |
+| 17  | PTY cap                                            | 16 concurrent tabs, 17th → rejected                                                                                  | unit + integration                                    |
+| 18  | PTY backpressure                                   | client ACK every 64 kB, server pauses at 1 MB unacked                                                                | integration: `yes` in a PTY → no OOM                  |
+| 19  | Audit log whitelist                                | only `{ts, event, sessionId, pid, cwd, shell, cols, rows, path, bytes}` — **no env, no tokens, no content**          | grep on `audit.log` in CI                             |
+| 20  | Logger redact                                      | pino `redact: ['token', 'authorization', 'cookie', '*.env']`                                                         | unit: serialized log never contains the token         |
+| 21  | Graceful shutdown                                  | SIGTERM → kill all PTYs → flush log → exit                                                                           | test: `ps` post-shutdown, no zombies                  |
+| 22  | Schema validation                                  | Zod on every request body                                                                                            | unit: invalid body → 400                              |
+| 23  | Markdown sanitisation                              | react-markdown + rehype-sanitize                                                                                     | unit + playwright: `<script>` inside assistant → text |
+| 24  | No `eval` / `Function` / `dangerouslySetInnerHTML` | ESLint `no-restricted-syntax` rule                                                                                   | lint in CI                                            |
+| 25  | `npm audit`                                        | `pnpm audit --prod --audit-level=high` in CI                                                                         | green in CI                                           |
 
 ## Threat → mitigation mapping
 
 ### DNS rebinding
 
-- Host allowlist (kontrola #6) — tylko `127.0.0.1:PORT` i `localhost:PORT`.
-- Nawet jeśli atakujący zrebinduje swoją domenę na `127.0.0.1`, Host header będzie jego domeną → 403.
-- WS Origin check (kontrola #7) — dodatkowa warstwa dla upgrade requestów.
+- Host allowlist (control #6) — only `127.0.0.1:PORT` and `localhost:PORT`.
+- Even if the attacker rebinds their domain to `127.0.0.1`, the Host header is still their domain → 403.
+- WS Origin check (control #7) — additional layer for upgrade requests.
 
-### CSRF z malicious strony
+### CSRF from a malicious page
 
-- `SameSite=Strict` cookie (kontrola #4) — cookie nie poleci z 3rd-party kontekstu.
-- Double-submit token (kontrola #9) — nawet gdyby SameSite zawiódł.
-- WS: CSRF w pierwszej wiadomości po handshake (bo WS upgrade nie wysyła custom headerów z browser JS).
+- `SameSite=Strict` cookie (control #4) — cookie does not ride along in third-party contexts.
+- Double-submit token (control #9) — fallback even if SameSite ever fails.
+- WS: CSRF travels in the first message after handshake (WS upgrades cannot carry custom headers from browser JS).
 
-### XSS w treści sesji
+### XSS inside session content
 
-- react-markdown + rehype-sanitize dla assistant (kontrola #23).
-- Wszystkie tool_result jako text w `<pre>` (brak HTML rendering).
-- Truncate pól > 10 MB (kontrola #16) — DoS protection.
-- CSP (kontrola #8) — nawet jeśli XSS przejdzie, `strict-dynamic` nie pozwoli odpalić inline script.
+- react-markdown + rehype-sanitize for assistant output (control #23).
+- All `tool_result` payloads render as text inside `<pre>` (no HTML).
+- Truncate fields > 10 MB (control #16) — DoS protection.
+- CSP (control #8) — even if XSS gets in, `strict-dynamic` blocks inline script execution.
 
 ### Path traversal
 
-- `path-guard.ts` z `fs.realpath` (kontrola #12) — rozwiązuje symlinki.
-- Prefix check: `resolved === root || resolved.startsWith(root + path.sep)` (unik bugów typu `/home/bartek/.claudeEVIL/`).
-- Każdy endpoint operujący na ścieżkach: **obowiązkowo** path-guard (lint hint można dodać w review).
-- Fuzz 100 payloadów w testach (kontrola #12 weryfikacja).
+- `path-guard.ts` with `fs.realpath` (control #12) — resolves symlinks.
+- Prefix check: `resolved === root || resolved.startsWith(root + path.sep)` (avoids the `/home/bartek/.claudeEVIL/` class of bugs).
+- Every endpoint that touches paths: **mandatory** path-guard (lint hint considered for review).
+- 100-payload fuzz in tests (control #12 verification).
 
 ### Token leakage
 
-- `?k=TOKEN` w URL wycieka do access loga, Referer, historii przeglądarki, shared link.
-- Mitigacja: redirect jest **pierwszą** rzeczą w `/api/auth` (kontrola #4).
-- `Referrer-Policy: no-referrer` (kontrola #10) — nie wycieka przez linki wychodzące.
-- Dedicated Chromium profile (kontrola #13) — nie kontaminuje głównej przeglądarki historią.
-- Access log filtrowany na warstwie pino (kontrola #20).
+- `?k=TOKEN` in the URL would leak to the access log, Referer, browser history, and shared links.
+- Mitigation: the redirect is the **first** thing `/api/auth` does (control #4).
+- `Referrer-Policy: no-referrer` (control #10) — no leakage via outbound links.
+- Dedicated Chromium profile (control #13) — the main browser's history stays clean.
+- Access log filtered at the pino layer (control #20).
 
 ### Malicious dep / supply chain
 
-- `pnpm audit` w CI (kontrola #25) blokuje high/critical.
-- `package.json` pin wersji (caret, nie wildcard) + `pnpm-lock.yaml` commited.
-- Docelowo: lockfile-lint lub socket.dev alert.
+- `pnpm audit` in CI (control #25) blocks high/critical vulnerabilities.
+- `package.json` pins versions (caret, not wildcard) and `pnpm-lock.yaml` is committed.
+- Future: lockfile-lint or socket.dev alerts.
 
-### PTY abuse (własne konto, ale bug w UI)
+### PTY abuse (own account, triggered by a UI bug)
 
-- Rate limit 10 spawnów/min (kontrola #15) chroni przed buggy loopem UI.
-- Cap 16 PTY (kontrola #17) chroni przed memory/fd exhaust.
-- Backpressure (kontrola #18) chroni przed spamowaniem przez `yes`/`cat bigfile`.
-- Audit log (kontrola #19) — w razie incydentu widać spawn history.
-- Graceful shutdown (kontrola #21) — nie zostawia zombie po zamknięciu.
+- Rate limit 10 spawns/min (control #15) contains a buggy UI loop.
+- 16-PTY cap (control #17) protects against memory / fd exhaustion.
+- Backpressure (control #18) stops spam from `yes` / `cat bigfile`.
+- Audit log (control #19) preserves spawn history for incident review.
+- Graceful shutdown (control #21) leaves no zombies behind.
 
 ## Cross-cutting security gates (pre-release checklist)
 
 - [ ] `pnpm audit --prod --audit-level=high` → zero
-- [ ] `pnpm lint` zielony (eslint rules na eval/Function/dangerouslySetInnerHTML)
-- [ ] `pnpm test:unit` zielony (100% path-guard fuzz, timing-safe, csrf)
-- [ ] `pnpm test:integration` zielony (Host check, Origin check, auth, CSRF replay)
-- [ ] `pnpm test:security` zielony (playwright security suite — patrz niżej)
-- [ ] `audit.log` z testów: `grep -E '(token|cookie|Bearer|api_key)'` → zero trafień
-- [ ] `lsof -i :$PORT` pokazuje tylko bind na `127.0.0.1`
+- [ ] `pnpm lint` green (eslint rules against eval / Function / dangerouslySetInnerHTML)
+- [ ] `pnpm test:unit` green (100% path-guard fuzz, timing-safe, csrf)
+- [ ] `pnpm test:integration` green (Host check, Origin check, auth, CSRF replay)
+- [ ] `pnpm test:security` green (playwright security suite — see below)
+- [ ] `audit.log` from tests: `grep -E '(token|cookie|Bearer|api_key)'` → zero hits
+- [ ] `lsof -i :$PORT` shows only the `127.0.0.1` bind
 - [ ] Chromium profile mode 0700 (`stat -c '%a'` == 700)
-- [ ] SIGTERM → profile dir usunięty (integration test)
-- [ ] Response headers na `/`:
-  - CSP bez `unsafe-inline` w script-src
+- [ ] SIGTERM → profile dir removed (integration test)
+- [ ] Response headers on `/`:
+  - CSP without `unsafe-inline` in script-src
   - `Referrer-Policy: no-referrer`
   - `X-Frame-Options: DENY`
   - `X-Content-Type-Options: nosniff`
   - `COOP: same-origin`, `CORP: same-origin`
-- [ ] Rate limits aktywne: manualny test `for i in {1..15}; do curl ... /api/sessions/new; done` → 10 OK + 5×429
-- [ ] Body limit aktywny: `curl -X PUT ... -d @2mb.md` → 413
-- [ ] Token rotation: restart `claude-ui`, stare cookie w Chromium → 401 + redirect na auth
+- [ ] Rate limits live: manual `for i in {1..15}; do curl ... /api/sessions/new; done` → 10 OK + 5×429
+- [ ] Body limit live: `curl -X PUT ... -d @2mb.md` → 413
+- [ ] Token rotation: restart `claude-ui`, old cookie in Chromium → 401 + redirect to auth
 
 ## Playwright security suite (`tests/security/*.spec.ts`)
 
-- `host-rebinding.spec.ts` — curl `Host: evil.com` → 403 na każdym endpoint
-- `origin-ws.spec.ts` — WS upgrade z wrong Origin → 403
-- `no-cookie.spec.ts` — automatyczny scan listy routes → każda wymaga cookie (except `/api/auth`, `/healthz`)
-- `csrf-replay.spec.ts` — tampered CSRF header/cookie → 403
-- `path-traversal.spec.ts` — 100 payloadów na każdym path-aware endpoint
-- `xss-render.spec.ts` — fixture z `<script>`, `javascript:`, `onerror=` → renderowane jako text
-- `rate-limit.spec.ts` — 11ty spawn → 429, 101st REST → 429
-- `body-limit.spec.ts` — PUT 2 MB → 413
-- `token-rotation.spec.ts` — kill server + restart → stare cookie 401
+- `host-rebinding.spec.ts` — `Host: evil.com` → 403 on every endpoint.
+- `origin-ws.spec.ts` — WS upgrade with wrong Origin → 403.
+- `no-cookie.spec.ts` — automated route scan → every route requires a cookie (except `/api/auth`, `/healthz`).
+- `csrf-replay.spec.ts` — tampered CSRF header / cookie → 403.
+- `path-traversal.spec.ts` — 100 payloads on every path-aware endpoint.
+- `xss-render.spec.ts` — fixtures with `<script>`, `javascript:`, `onerror=` → rendered as text.
+- `rate-limit.spec.ts` — 11th spawn → 429, 101st REST → 429.
+- `body-limit.spec.ts` — PUT 2 MB → 413.
+- `token-rotation.spec.ts` — kill server + restart → old cookie 401.
 
-## Playbook incydentu
+## Incident playbook
 
-Jeśli użytkownik zauważy podejrzaną aktywność (np. niespodziewany PTY w audit.log):
+If a user spots suspicious activity (e.g. an unexpected PTY in `audit.log`):
 
-1. `grep '<suspicious-pid>' ~/.claude/claude-ui/audit.log` — pełna historia eventów
-2. `ps -ef | grep <pid>` — czy proces jeszcze żyje
-3. `kill` serwer (SIGTERM) — wszystkie PTY umierają, profile cleanup
-4. Review `audit.log` — szukaj `spawn` z nieoczekiwanym cwd lub shell
-5. Regeneruj token (restart `claude-ui`) — stare cookie invalid
+1. `grep '<suspicious-pid>' ~/.claude/claude-ui/audit.log` — full event history for that PID.
+2. `ps -ef | grep <pid>` — check whether the process is still alive.
+3. `kill` the server (SIGTERM) — every PTY dies, profile gets cleaned up.
+4. Review `audit.log` — look for `spawn` events with an unexpected cwd or shell.
+5. Regenerate the token (restart `claude-ui`) — old cookies become invalid.
 
-## Co nie jest w scope (design notes)
+## Out of scope (design notes)
 
-- **Multi-user auth** — pojedynczy lokalny user, brak session management.
-- **HTTPS/TLS** — lokalny 127.0.0.1, cert dodałby komplikacji (self-signed warning, Secure cookie logika).
-- **mTLS** — overkill dla lokalnego tool.
-- **AppArmor/SELinux profile** — user-level tool, system-level hardening poza scope.
-- **Sandboxing PTY (firejail/bwrap)** — zdecydowano: full shell (user's account już ma te uprawnienia).
+- **Multi-user auth** — single local user, no session management.
+- **HTTPS / TLS** — local `127.0.0.1`; a cert would add complexity (self-signed warning, Secure-cookie logic) without a real threat model win.
+- **mTLS** — overkill for a local tool.
+- **AppArmor / SELinux profile** — user-level tool, system-level hardening is out of scope.
+- **PTY sandboxing (firejail / bwrap)** — decided against: the shell already runs with the user's own privileges; sandboxing would break shell ergonomics without blocking any real attacker who already owns the account.

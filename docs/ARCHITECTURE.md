@@ -1,14 +1,14 @@
-# Architektura `claude-ui`
+# `claude-ui` architecture
 
-## Wysoki poziom
+## Big picture
 
 ```
 ┌────────────────────────────────────────────────────────┐
 │  bin/claude-ui  (launcher)                             │
 │  1. find ephemeral port (49152-65535)                  │
 │  2. gen 32B token (crypto.randomBytes)                 │
-│  3. spawn `tsx server.ts` z PORT + TOKEN w env         │
-│  4. poll /healthz (auth-exempt) aż ready               │
+│  3. spawn `tsx server.ts` with PORT + TOKEN in env     │
+│  4. poll /healthz (auth-exempt) until ready            │
 │  5. mkdir -m 0700 $XDG_RUNTIME_DIR/claude-ui/<uuid>    │
 │  6. spawn chromium --app=http://127.0.0.1:PORT/?k=TOK  │
 │       --user-data-dir=<profile>                        │
@@ -41,111 +41,112 @@
          (security, jsonl, pty, watcher, ws, server)
 ```
 
-## Warstwy
+## Layers
 
 ### Frontend (Next.js 15 App Router + React 19)
 
-- `app/layout.tsx` — CSP nonce (z headers()), Providers (TanStack Query + Zustand), globalne shadcn theme
-- `app/page.tsx` — główny shell (sidebar + main, resizable panels)
-- `app/(ui)/*` — komponenty UI per moduł
-- Dane z REST przez TanStack Query, stan lokalny w Zustand slices
-- Streaming JSONL: `fetch` z `ReadableStream` + progressive parse w hooku
-- Virtualizacja: react-virtuoso dla listy wiadomości i dla długich list sesji
+- `app/layout.tsx` — CSP nonce (from `headers()`), providers (TanStack Query + Zustand), global shadcn theme.
+- `app/page.tsx` — main shell (sidebar + main, resizable panels).
+- `app/(ui)/*` — UI components per module.
+- Data from REST via TanStack Query; local UI state in Zustand slices.
+- Streaming JSONL: `fetch` + `ReadableStream` with progressive parsing in a hook.
+- Virtualisation: react-virtuoso for the message list and long session lists.
 
 ### Backend (custom server.ts + Next handler)
 
-- Node 20 LTS, TypeScript strict, `tsx` w dev, standalone build w prod
-- Jedna instancja `http.Server` obsługuje Next HTTP + WS upgrade
-- Middleware stack (przed Next handlerem):
-  1. Host allowlist (`127.0.0.1:PORT` lub `localhost:PORT` z redirectem)
-  2. Auth cookie check (poza `/api/auth`, `/healthz`, `_next/*`)
-  3. CSRF double-submit dla niebezpiecznych metod (POST/PUT/DELETE/PATCH)
+- Node 20 LTS, TypeScript strict, `tsx` in dev, standalone build in prod.
+- A single `http.Server` instance handles Next HTTP plus WS upgrades.
+- Middleware stack (before the Next handler):
+  1. Host allowlist (`127.0.0.1:PORT` or `localhost:PORT` with redirect).
+  2. Auth cookie check (except `/api/auth`, `/healthz`, `_next/*`).
+  3. CSRF double-submit for unsafe methods (POST/PUT/DELETE/PATCH).
 
-### REST API (App Router Route Handlers)
+### REST API (App Router route handlers)
 
-- `/api/auth` — token → HttpOnly+SameSite=Strict cookie + redirect
-- `/api/projects` — GET, discovery z `~/.claude/projects/`
-- `/api/projects/[slug]/sessions` — GET, lista JSONL w projekcie
-- `/api/sessions/[id]` — GET, streaming chunked
-- `/api/sessions/[id]/export` — GET, Markdown download
-- `/api/sessions/new` — POST, spawn `claude` w cwd projektu (walidacja cwd)
-- `/api/claude-md` — GET/PUT globalny CLAUDE.md
-- `/api/claude-md/[slug]` — GET/PUT per-project
-- `/healthz` — GET, auth-exempt, dla launchera smoke testu
+- `/api/auth` — token → HttpOnly+SameSite=Strict cookie + redirect.
+- `/api/projects` — GET, discovery of `~/.claude/projects/`.
+- `/api/projects/[slug]/sessions` — GET, JSONL list for a project.
+- `/api/sessions/[id]` — GET, chunked streaming.
+- `/api/sessions/[id]/export` — GET, Markdown download.
+- `/api/sessions/new` — POST, spawn `claude` inside the project's cwd (with cwd validation).
+- `/api/claude-md` — GET/PUT for the global CLAUDE.md.
+- `/api/claude-md/[slug]` — GET/PUT per-project.
+- `/healthz` — GET, auth-exempt, used by the launcher smoke test.
 
-### WebSocket kanały
+### WebSocket channels
 
-- `/api/ws/pty` — bidirectional protokół PTY (spawn, data, resize, kill, ack)
-- `/api/ws/watch` — server push events z fs watchera (project-added, session-added, session-updated)
+- `/api/ws/pty` — bidirectional PTY protocol (spawn, data, resize, kill, ack).
+- `/api/ws/watch` — server-pushed events from the fs watcher (project-added, session-added, session-updated).
 
-### Biblioteki wewnętrzne (`lib/`)
+### Internal libraries (`lib/`)
 
-- `lib/security/*` — pure functions, zero IO, trywialnie testowalne
-  - `token.ts` — `generateToken()`, `safeCompare(a, b)`
-  - `csrf.ts` — `issueCsrf()`, `verifyCsrf(cookie, header)`
-  - `host-check.ts` — `isHostAllowed(req)`, `isOriginAllowed(req)`
-  - `path-guard.ts` — `assertInside(root, candidate)` → realpath + prefix check
-  - `csp.ts` — `makeCsp(nonce)` → header value
+- `lib/security/*` — pure functions, zero IO, trivially testable.
+  - `token.ts` — `generateToken()`, `safeCompare(a, b)`.
+  - `csrf.ts` — `issueCsrf()`, `verifyCsrf(cookie, header)`.
+  - `host-check.ts` — `isHostAllowed(req)`, `isOriginAllowed(req)`.
+  - `path-guard.ts` — `assertInside(root, candidate)` → realpath + prefix check.
+  - `csp.ts` — `makeCsp(nonce)` → header value.
 - `lib/jsonl/*`
-  - `types.ts` — Zod schemas dla 8 event types
-  - `parser.ts` — `parseJsonlStream(readable) → AsyncIterable<Event>`
-  - `index.ts` — `listProjects()`, `listSessions(slug)`, `decodeSlug(slug)`
-  - `export-md.ts` — `sessionToMarkdown(events) → string`
-  - `search.ts` — `searchInSession(events, query)`
+  - `types.ts` — Zod schemas for the 8 event types.
+  - `parser.ts` — `parseJsonlStream(readable) → AsyncIterable<Event>`.
+  - `index.ts` — `listProjects()`, `listSessions(slug)`, `decodeSlug(slug)`.
+  - `export-md.ts` — `sessionToMarkdown(events) → string`.
+  - `search.ts` — `searchInSession(events, query)`.
 - `lib/pty/*`
-  - `manager.ts` — singleton, Map<id, PtyHandle>, cap 16, rate limit 10/min
-  - `spawn.ts` — wrapper node-pty, resolve `$SHELL` z fallbackami
-  - `audit.ts` — append `~/.claude/claude-ui/audit.log`
-- `lib/watcher/chokidar.ts` — singleton watcher + EventEmitter
+  - `manager.ts` — singleton, `Map<id, PtyHandle>`, cap 16, rate limit 10/min.
+  - `spawn.ts` — node-pty wrapper, resolves `$SHELL` with per-OS fallbacks.
+  - `audit.ts` — appends `~/.claude/claude-ui/audit.log`.
+- `lib/watcher/chokidar.ts` — singleton watcher + EventEmitter.
 - `lib/ws/*`
-  - `server.ts` — upgrade router, handshake auth
-  - `pty-channel.ts` — protokół PTY, flow control (client ACK)
-  - `watch-channel.ts` — push events
+  - `server.ts` — upgrade router and handshake auth.
+  - `pty-channel.ts` — PTY protocol with client-ACK flow control.
+  - `watch-channel.ts` — server-pushed events.
 - `lib/server/*`
-  - `port.ts` — `findEphemeralPort()` z retry na TOCTOU
-  - `config.ts` — stałe: `HOME`, `CLAUDE_DIR`, `AUDIT_PATH`, `PROFILE_DIR`
-  - `logger.ts` — pino instance, redact `token`, `authorization`, `cookie`
+  - `port.ts` — `findEphemeralPort()` with TOCTOU retry.
+  - `config.ts` — constants: `HOME`, `CLAUDE_DIR`, `AUDIT_PATH`, `PROFILE_DIR`.
+  - `platform.ts` — OS helpers: `defaultShell`, `runtimeRootDir`, `chromiumCandidates`, `findChromium`.
+  - `logger.ts` — pino instance with `redact: ['token', 'authorization', 'cookie', '*.env']`.
 
-## Przepływy danych
+## Data flows
 
-### Otwarcie sesji w trybie read-only
+### Opening a session in read-only mode
 
-1. User klika projekt w sidebarze → `GET /api/projects/[slug]/sessions`
-2. Klik sesji → `GET /api/sessions/[id]` (streaming JSONL)
-3. Hook `use-session-stream` iteruje po chunks → feed do react-virtuoso
-4. Shiki lazy-loaded per język bloku kodu
+1. User clicks a project in the sidebar → `GET /api/projects/[slug]/sessions`.
+2. Click a session → `GET /api/sessions/[id]` (streaming JSONL).
+3. The `use-session-stream` hook iterates over chunks and feeds react-virtuoso.
+4. Shiki is lazy-loaded per code-block language.
 
-### Otwarcie terminala w projekcie
+### Opening a terminal in a project
 
-1. User klika "terminal" na projekcie → client otwiera WS `/api/ws/pty`
-2. Handshake: cookie auth + Origin check + CSRF w pierwszej wiadomości
-3. Client wysyła `{type:"spawn", shell:"/bin/bash", cwd:"/home/bartek/project", cols:80, rows:24}`
-4. Server: path-guard cwd, rate limit check, `pty.spawn(...)`, audit append
-5. Bidirectional data stream z flow control (client ACK co 64 kB, server pause przy 1 MB unacked)
+1. User clicks "terminal" on a project → client opens the WS `/api/ws/pty`.
+2. Handshake: cookie auth + Origin check + CSRF in the first message.
+3. Client sends `{type:"spawn", shell:"/bin/bash", cwd:"/home/bartek/project", cols:80, rows:24}`.
+4. Server: path-guard cwd, rate-limit check, `pty.spawn(...)`, audit append.
+5. Bidirectional data stream with flow control (client ACK every 64 kB, server pauses at 1 MB unacked).
 
-### Live update gdy Claude CLI pisze do JSONL
+### Live update when the Claude CLI writes to a JSONL
 
-1. chokidar wykrywa `change` na `~/.claude/projects/<slug>/<sessionId>.jsonl`
-2. Debounce 200 ms per plik → emit event
-3. `watch-channel` pushuje `{type:"session-updated", slug, sessionId}` do klientów z aktywnym WS
-4. Klient → `queryClient.invalidateQueries(['session', sessionId])` → reload
-5. Jeśli sesja jest aktualnie otwarta: hook dopina nowy ogon streaming bez full reload
+1. chokidar detects a `change` on `~/.claude/projects/<slug>/<sessionId>.jsonl`.
+2. Debounce 200 ms per file → emit event.
+3. `watch-channel` pushes `{type:"session-updated", slug, sessionId}` to every client with an active WS.
+4. Client → `queryClient.invalidateQueries(['session', sessionId])` → reload.
+5. If the session is open in the viewer, the hook attaches a new streaming tail instead of doing a full reload.
 
 ## Standalone build
 
-- `next build` z `output: 'standalone'` → `.next/standalone/` zawiera minimalny runtime
-- Postbuild: `cp server.ts .next/standalone/` + `cp -r bin .next/standalone/`
-- Uruchomienie prod: `node .next/standalone/server.js` (nie, używamy tsx + server.ts w dev; prod ma server.js zbudowany przez tsx build)
+- `next build` with `output: 'standalone'` → `.next/standalone/` contains a minimal runtime.
+- Postbuild: `cp server.ts .next/standalone/` + `cp -r bin .next/standalone/`.
+- Prod start: `node .next/standalone/server.js` (dev uses `tsx` + `server.ts`; prod ships `server.js` produced by tsx build).
 
-## Performance targety
+## Performance targets
 
-- Pierwszy byte streamu sesji: < 50 ms (lokalnie)
-- Scroll 2000 wiadomości: FPS > 30
-- PTY echo RTT: < 20 ms
-- Memory: < 300 MB przy 5 aktywnych zakładkach terminala + 2 otwartych sesjach JSONL
+- First byte of a session stream: < 50 ms (locally).
+- Scroll 2000 messages: FPS > 30.
+- PTY echo RTT: < 20 ms.
+- Memory: < 300 MB with 5 active terminal tabs and 2 open JSONL sessions.
 
 ## Observability
 
-- Logger: pino z redact listą (token, authorization, cookie, env.\*)
-- Audit log: tylko fakty strukturalne, bez treści (patrz SECURITY.md)
-- Health: `/healthz` → `{status:"ok", uptime, pty_count, memory_mb}` (auth-exempt dla launcher + systemd probe)
+- Logger: pino with a redact list (`token`, `authorization`, `cookie`, `env.*`).
+- Audit log: structural facts only, no content (see `SECURITY.md`).
+- Health: `/healthz` → `{status:"ok", uptime, pty_count, memory_mb}` (auth-exempt for launcher + systemd probe).

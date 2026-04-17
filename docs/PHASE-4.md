@@ -1,69 +1,69 @@
 # PHASE 4 — WebSocket + node-pty + xterm (single terminal)
 
-**Cel**: pojedyncza zakładka terminala w UI. WebSocket działa, PTY spawnuje się z `$SHELL`, xterm.js renderuje, flow control zapobiega OOM przy szybkim outpucie.
+**Goal**: a single terminal tab in the UI. WebSocket works, a PTY spawns from `$SHELL`, xterm.js renders, flow control prevents OOM on fast output.
 
-**Prerequisites**: fazy 0–3 (auth, JSONL, UI layout).
+**Prerequisites**: phases 0–3 (auth, JSONL, UI layout).
 
 ## Checklist
 
 ### PTY infrastructure
 
-- [ ] `tests/unit/pty/manager.test.ts` — cap 16, 17ty rejected, rate limit 10/min, backpressure 1 MB
-- [ ] `lib/pty/manager.ts` — singleton Map<id, {pty, cwd, shell, unacked, paused}>, metody `spawn`, `write`, `resize`, `kill`, `list`
-- [ ] `lib/pty/spawn.ts` — resolve `$SHELL` (fallback `/bin/bash`), path-guard cwd, nvidia-pty wrapper
-- [ ] `lib/pty/audit.ts` — append JSON line do `~/.claude/claude-ui/audit.log`: `{ts, event, id, pid, cwd, shell, cols, rows}` — **nie** env, **nie** treść
+- [ ] `tests/unit/pty/manager.test.ts` — cap 16, 17th rejected, rate limit 10/min, 1 MB backpressure
+- [ ] `lib/pty/manager.ts` — singleton `Map<id, {pty, cwd, shell, unacked, paused}>`, methods `spawn`, `write`, `resize`, `kill`, `list`
+- [ ] `lib/pty/spawn.ts` — resolve `$SHELL` (fallback `/bin/bash`), path-guard cwd, node-pty wrapper
+- [ ] `lib/pty/audit.ts` — append a JSON line to `~/.claude/claude-ui/audit.log`: `{ts, event, id, pid, cwd, shell, cols, rows}` — **not** env, **not** content
 - [ ] Audit log file mode 0600, parent dir 0700
 
 ### WebSocket transport
 
-- [ ] `lib/ws/server.ts` — `attachUpgradeRouter(http.Server, {next})` — routuje `/_next/webpack-hmr` do Next HMR, `/api/ws/pty` do `pty-channel`, `/api/ws/watch` do `watch-channel`
-- [ ] Origin check na każdym upgrade: `req.headers.origin === 'http://127.0.0.1:PORT'`, inaczej `socket.destroy()`
-- [ ] Auth: cookie odczytany z `req.headers.cookie` + safeCompare z serwerowym tokenem
-- [ ] CSRF: pierwsza wiadomość klienta po otwarciu musi zawierać aktualny CSRF token, inaczej close 1008
-- [ ] `lib/ws/pty-channel.ts` — protokół: `{type: "spawn" | "data" | "resize" | "kill" | "ack"}`
-- [ ] Flow control: serwer wysyła chunk max 64 kB, liczy `unacked`, przy `unacked > 1 MB` → `pty.pause()`, gdy klient ACK → resume
-- [ ] Klient ACK co 64 kB received
+- [ ] `lib/ws/server.ts` — `attachUpgradeRouter(http.Server, {next})` — routes `/_next/webpack-hmr` to Next HMR, `/api/ws/pty` to `pty-channel`, `/api/ws/watch` to `watch-channel`
+- [ ] Origin check on every upgrade: `req.headers.origin === 'http://127.0.0.1:PORT'`, otherwise `socket.destroy()`
+- [ ] Auth: cookie read from `req.headers.cookie` + safeCompare against the server token
+- [ ] CSRF: the first client message after open must carry the current CSRF token, otherwise close 1008
+- [ ] `lib/ws/pty-channel.ts` — protocol: `{type: "spawn" | "data" | "resize" | "kill" | "ack"}`
+- [ ] Flow control: server sends chunks of at most 64 kB, counts `unacked`; when `unacked > 1 MB` → `pty.pause()`, resume on client ACK
+- [ ] Client ACKs every 64 kB received
 
 ### server.ts integration
 
-- [ ] `server.ts` dopięte: `attachUpgradeRouter(httpServer, {next})` po `app.prepare()`
+- [ ] `server.ts` wires `attachUpgradeRouter(httpServer, {next})` after `app.prepare()`
 - [ ] SIGTERM handler: `manager.killAll()` + `log.flush()` + `server.close()`
 
 ### UI: Terminal component
 
 - [ ] `app/(ui)/terminal/Terminal.tsx` — xterm instance, addon-fit, addon-web-links, addon-canvas
-- [ ] `hooks/use-pty.ts` — otwiera WS, wysyła `spawn`, subscribe data, send input
-- [ ] Resize: ResizeObserver + debounce 100 ms → `fit()` → `{type:"resize", cols, rows}`
-- [ ] Theme: dopasowany do shadcn (neutral base)
-- [ ] Copy/paste: Ctrl+Shift+C/V (niekoliduje z claude CLI)
-- [ ] Prompt: "new terminal" button → otwiera PTY z `$SHELL` w `$HOME`
-- [ ] "Terminal zamknięty" placeholder gdy PTY exit
+- [ ] `hooks/use-pty.ts` — opens the WS, sends `spawn`, subscribes to data, sends input
+- [ ] Resize: ResizeObserver + 100 ms debounce → `fit()` → `{type:"resize", cols, rows}`
+- [ ] Theme tuned to shadcn (neutral base)
+- [ ] Copy/paste: Ctrl+Shift+C / Ctrl+Shift+V (no collision with the claude CLI)
+- [ ] Prompt: "new terminal" button → spawn a PTY with `$SHELL` in `$HOME`
+- [ ] "Terminal closed" placeholder once the PTY exits
 
-### Testy
+### Tests
 
-- [ ] `tests/integration/pty-channel.test.ts` — ws client spawn + data + kill, bez zombie po kill
-- [ ] `tests/integration/pty-backpressure.test.ts` — spawn `yes`, klient nie ACK, server pauzuje przy 1 MB, po ACK resume
-- [ ] `tests/integration/pty-origin.test.ts` — WS z wrong Origin → 403 (socket destroyed)
-- [ ] `tests/integration/pty-auth.test.ts` — bez cookie → close 4401
+- [ ] `tests/integration/pty-channel.test.ts` — ws client spawn + data + kill, no zombies after kill
+- [ ] `tests/integration/pty-backpressure.test.ts` — spawn `yes`, client does not ACK, server pauses at 1 MB, resumes on ACK
+- [ ] `tests/integration/pty-origin.test.ts` — WS with wrong Origin → 403 (socket destroyed)
+- [ ] `tests/integration/pty-auth.test.ts` — no cookie → close 4401
 - [ ] `tests/e2e/phase-4-smoke.spec.ts`:
-  - otwieram "new terminal"
-  - widzę prompt `$ ` lub `bartek@host$`
-  - wpisuję `echo hello` + Enter
-  - widzę `hello` < 100 ms
-  - resize okna → `cols` zaktualizowany (poprzez `stty size` check)
+  - open "new terminal"
+  - see a prompt `$ ` or `bartek@host$`
+  - type `echo hello` + Enter
+  - see `hello` < 100 ms later
+  - resize the window → `cols` updates (verified via `stty size`)
 
 ## Security gate
 
-- [ ] WS upgrade bez Origin → 403 (curl test z `-H 'Origin: http://evil.com'`)
-- [ ] WS upgrade bez auth cookie → close 4401
-- [ ] WS spawn z `cwd` poza `$HOME` → rejected (path-guard)
-- [ ] `audit.log` zawiera spawn entries **bez** treści env (grep na `HOME=`, `PATH=`, `TOKEN=` → zero)
-- [ ] SIGTERM na serwerze → wszystkie PTY killed (`ps -ef | grep bash` przed/po — brak zombie)
-- [ ] Flow control: `yes` w PTY nie rośnie pamięć serwera > 50 MB (monitoring)
-- [ ] Rate limit: 11ty spawn w 1 min → rejected z 429
+- [ ] WS upgrade without Origin → 403 (curl test with `-H 'Origin: http://evil.com'`)
+- [ ] WS upgrade without auth cookie → close 4401
+- [ ] WS spawn with `cwd` outside `$HOME` → rejected (path-guard)
+- [ ] `audit.log` contains spawn entries **without** env content (grep for `HOME=`, `PATH=`, `TOKEN=` → zero)
+- [ ] SIGTERM on the server → all PTYs killed (`ps -ef | grep bash` before/after — no zombies)
+- [ ] Flow control: `yes` in a PTY does not push server memory above 50 MB (monitored)
+- [ ] Rate limit: 11th spawn within 1 min → rejected with 429
 
 ## Deliverables
 
 - `git tag phase-4-done`
-- Screencast terminala w PR
-- Integration + e2e zielone
+- Screencast of the terminal in the PR
+- Integration + e2e green

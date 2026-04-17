@@ -1,8 +1,8 @@
 # PHASE 2 — Sidebar + Session Explorer (UI)
 
-**Cel**: pierwszy wizualny layout — sidebar z listą projektów + search, panel sesji, placeholder na viewer. TanStack Query + Zustand wpięte. shadcn/ui komponenty zainstalowane i działające.
+**Goal**: the first visual layout — a sidebar with the project list + search, a session panel, and a placeholder for the viewer. TanStack Query + Zustand are wired up. shadcn/ui components are installed and working.
 
-**Prerequisites**: faza 1 (REST działa, fixtures gotowe).
+**Prerequisites**: phase 1 (REST works, fixtures ready).
 
 ## Checklist
 
@@ -10,11 +10,11 @@
 
 - [ ] `pnpm dlx shadcn@latest init` (style: new-york, base color: neutral)
 - [ ] `pnpm dlx shadcn@latest add button input command scroll-area separator tooltip skeleton`
-- [ ] `tailwind.config.ts` + `app/globals.css` z Tailwind directives
-- [ ] `app/layout.tsx` z CSP nonce (`headers().get('x-csp-nonce')`) + Providers:
+- [ ] `tailwind.config.ts` + `app/globals.css` with Tailwind directives
+- [ ] `app/layout.tsx` with CSP nonce (`headers().get('x-csp-nonce')`) + providers:
   - `QueryClientProvider` (staleTime: 30_000, refetchOnWindowFocus: false)
-  - Zustand inline (bez providera)
-- [ ] `lib/security/csp.ts` użyty w custom server: ustawia nonce w response header `x-csp-nonce` dla App Routera
+  - Zustand inline (no provider needed)
+- [ ] `lib/security/csp.ts` used in the custom server: sets the nonce in the response header `x-csp-nonce` for the App Router
 
 ### State management
 
@@ -22,45 +22,45 @@
 - [ ] `hooks/use-projects.ts` — TanStack Query: `useProjects()` → `GET /api/projects`
 - [ ] `hooks/use-sessions.ts` — `useSessions(slug)` → `GET /api/projects/:slug/sessions` enabled=!!slug
 
-### Komponenty
+### Components
 
-- [ ] `app/(ui)/sidebar/ProjectList.tsx` — `ScrollArea`, item = `Button variant="ghost"`, aktywny highlighted
-- [ ] `app/(ui)/sidebar/Search.tsx` — `Command` (cmdk) + debounce 150 ms, filtruje projects po prefix+substring
-- [ ] `app/(ui)/session-explorer/SessionList.tsx` — lista sesji z timestamp (relative: "2 h ago"), size, message count, preview pierwszej wiadomości
-- [ ] `app/(ui)/session-explorer/SessionItem.tsx` — card z padding, hover state
-- [ ] `app/page.tsx` — główny layout: 280px sidebar + flex main, resizable (opcjonalnie, low-pri)
+- [ ] `app/(ui)/sidebar/ProjectList.tsx` — `ScrollArea`, item = `Button variant="ghost"`, active state highlighted
+- [ ] `app/(ui)/sidebar/Search.tsx` — `Command` (cmdk) + 150 ms debounce, filters projects by prefix+substring
+- [ ] `app/(ui)/session-explorer/SessionList.tsx` — session list with relative timestamps ("2 h ago"), size, message count, preview of the first message
+- [ ] `app/(ui)/session-explorer/SessionItem.tsx` — padded card with hover state
+- [ ] `app/page.tsx` — main layout: 280 px sidebar + flex main, resizable (optional, low-pri)
 
 ### UX details
 
-- [ ] Empty state dla 0 projektów (komunikat + link do dokumentacji Claude Code)
-- [ ] Loading skeleton (shadcn `Skeleton`) podczas fetch
-- [ ] Error state z retry button
-- [ ] Slug → display name (np. `-home-bartek-main-projects-claude-ui` → `~/main-projects/claude-ui`)
-- [ ] Tooltip na project pokazuje pełną ścieżkę
-- [ ] Sortowanie sesji po `lastActivity` DESC default, opcja "oldest first"
+- [ ] Empty state for 0 projects (message + link to Claude Code docs)
+- [ ] Loading skeleton (shadcn `Skeleton`) during fetch
+- [ ] Error state with a retry button
+- [ ] Slug → display name (e.g. `-home-bartek-main-projects-claude-ui` → `~/main-projects/claude-ui`)
+- [ ] Tooltip on a project reveals the full path
+- [ ] Sessions sort by `lastActivity` DESC by default, with an "oldest first" toggle
 
-### Testy
+### Tests
 
-- [ ] `tests/unit/components/ProjectList.test.tsx` — render 50 projektów, search filtruje
-- [ ] `tests/unit/components/Search.test.tsx` — debounce działa (fake timers)
+- [ ] `tests/unit/components/ProjectList.test.tsx` — render 50 projects, search filters down
+- [ ] `tests/unit/components/Search.test.tsx` — debounce works (fake timers)
 - [ ] `tests/e2e/phase-2-smoke.spec.ts` — playwright:
-  - start `claude-ui`, Chromium otwiera się
-  - widzę listę projektów z fixture
-  - klikam projekt → widzę listę sesji
-  - search "home" filtruje do pasujących
-  - XSS fixture: nazwa `<script>` widoczna jako text, NIE execute
+  - launch `claude-ui`, Chromium opens
+  - project list from the fixture is visible
+  - clicking a project shows the session list
+  - search "home" narrows to matching projects
+  - XSS fixture: a `<script>` name appears as text, does NOT execute
 
 ## Security gate
 
-- [ ] CSP response header obecny na `/`
-- [ ] `script-src` **bez** `unsafe-inline` (manual devtools check + playwright assertion na headerze)
-- [ ] CSP report-only **wyłączone** w prod (tylko strict)
-- [ ] Nazwa projektu z `<script>` w fixture renderowana jako text (DOM check: `textContent` === payload, `innerHTML` nie zawiera `<script>`)
-- [ ] Brak `dangerouslySetInnerHTML` w komponentach (lint enforced, ale explicit grep też)
-- [ ] TanStack Query fetch z `credentials: 'include'` (cookie poleci)
+- [ ] CSP response header present on `/`
+- [ ] `script-src` **without** `unsafe-inline` (manual devtools check + playwright header assertion)
+- [ ] CSP report-only **disabled** in prod (strict only)
+- [ ] A project name containing `<script>` in the fixture renders as text (DOM check: `textContent` === payload, `innerHTML` does not contain `<script>`)
+- [ ] No `dangerouslySetInnerHTML` in components (enforced by lint, plus explicit grep)
+- [ ] TanStack Query fetch with `credentials: 'include'` so the cookie ships
 
 ## Deliverables
 
 - `git tag phase-2-done`
-- Screenshot sidebara + session listy w PR
-- Playwright e2e zielony
+- Screenshot of the sidebar + session list in the PR
+- Playwright e2e green

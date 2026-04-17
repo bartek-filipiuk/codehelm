@@ -1,8 +1,8 @@
 # PHASE 3 — Conversation Viewer (parser + virtual list + highlighting)
 
-**Cel**: kliknięcie sesji pokazuje historię z JSONL streamowo, z virtual listą, syntax highlightingiem, safe markdown dla assistant. Search w sesji. Follow mode (auto-scroll do najnowszej wiadomości).
+**Goal**: clicking a session shows the history streamed from JSONL with a virtualised list, syntax highlighting, and safe markdown for the assistant role. In-session search. Follow mode (auto-scroll to the newest message).
 
-**Prerequisites**: faza 2 (UI layout, Zustand, TanStack Query).
+**Prerequisites**: phase 2 (UI layout, Zustand, TanStack Query).
 
 ## Checklist
 
@@ -11,66 +11,66 @@
 - [ ] `hooks/use-session-stream.ts`:
   - `fetch('/api/sessions/:id', {credentials:'include'})`
   - `response.body.getReader()` + progressive line parse
-  - stan: `events: Event[]`, `loading`, `error`, `done`
-  - cleanup: cancel readera przy unmount
-- [ ] Kiedy `done`, jeśli sesja jest aktywna (fs watcher w fazie 6 push), hook dopina kolejne eventy bez full reload (preparacja API pod fazę 6)
+  - state: `events: Event[]`, `loading`, `error`, `done`
+  - cleanup: cancel the reader on unmount
+- [ ] Once `done`, if the session is still live (fs watcher in phase 6 will push), the hook attaches further events without a full reload (prepares the API for phase 6)
 
-### Renderery per typ
+### Per-type renderers
 
-- [ ] `app/(ui)/conversation/Viewer.tsx` — `<Virtuoso>` z `itemContent` + `followOutput` (sticky toggle)
-- [ ] `app/(ui)/conversation/messages/UserMsg.tsx` — prosta wiadomość, `<pre class="whitespace-pre-wrap">` dla multiline
-- [ ] `app/(ui)/conversation/messages/AssistantMsg.tsx` — `react-markdown` + `rehype-sanitize` (domyślny schema), Shiki dla code blocks
-- [ ] `app/(ui)/conversation/messages/ToolUseMsg.tsx` — collapsed domyślnie: `{name}: {truncated(input, 200)}`, expand → pełny JSON w `<pre>`
-- [ ] `app/(ui)/conversation/messages/ToolResultMsg.tsx` — stdout/stderr collapsed, exitCode badge, expand pokazuje text
-- [ ] `app/(ui)/conversation/messages/SystemMsg.tsx` — wyszarzony, małym fontem
+- [ ] `app/(ui)/conversation/Viewer.tsx` — `<Virtuoso>` with `itemContent` + `followOutput` (sticky toggle)
+- [ ] `app/(ui)/conversation/messages/UserMsg.tsx` — simple message, `<pre class="whitespace-pre-wrap">` for multiline
+- [ ] `app/(ui)/conversation/messages/AssistantMsg.tsx` — `react-markdown` + `rehype-sanitize` (default schema), Shiki for code blocks
+- [ ] `app/(ui)/conversation/messages/ToolUseMsg.tsx` — collapsed by default: `{name}: {truncated(input, 200)}`, expand → full JSON in a `<pre>`
+- [ ] `app/(ui)/conversation/messages/ToolResultMsg.tsx` — stdout/stderr collapsed, exitCode badge, expand reveals the text
+- [ ] `app/(ui)/conversation/messages/SystemMsg.tsx` — greyed out, small font
 - [ ] `app/(ui)/conversation/messages/AttachmentMsg.tsx` — hook info (name, duration, exit)
-- [ ] `app/(ui)/conversation/messages/PermissionMsg.tsx` — badge z mode (plan/edit/default)
-- [ ] `app/(ui)/conversation/messages/QueueMsg.tsx` — jedno-liniowa info
+- [ ] `app/(ui)/conversation/messages/PermissionMsg.tsx` — badge showing the mode (plan/edit/default)
+- [ ] `app/(ui)/conversation/messages/QueueMsg.tsx` — single-line info
 
 ### Syntax highlighting
 
-- [ ] `lib/ui/shiki.ts` — lazy `createHighlighter` z lang detection; cache w module
-- [ ] Fallback `<pre><code>` dla unrecognized language
-- [ ] Highlighter lazy-loaded per session open (nie w głównym chunku)
+- [ ] `lib/ui/shiki.ts` — lazy `createHighlighter` with language detection; cache at module scope
+- [ ] Fallback `<pre><code>` for an unrecognised language
+- [ ] Highlighter lazy-loaded per session open (not in the main chunk)
 
 ### Search
 
-- [ ] `app/(ui)/conversation/SearchBar.tsx` — Input + prev/next button
-- [ ] `lib/jsonl/search.ts` — case-insensitive match w treści user/assistant/tool_result
-- [ ] Podświetlenie match w rendererze (`<mark>`)
-- [ ] Skoki między matchami → `virtuoso.scrollToIndex`
+- [ ] `app/(ui)/conversation/SearchBar.tsx` — Input + prev/next buttons
+- [ ] `lib/jsonl/search.ts` — case-insensitive match across user/assistant/tool_result content
+- [ ] Highlight matches in the renderer (`<mark>`)
+- [ ] Jump between matches → `virtuoso.scrollToIndex`
 
 ### UX
 
-- [ ] Follow mode toggle (pin/unpin) — dzwięk gdy nowy event podczas historycznego scrolla
+- [ ] Follow-mode toggle (pin/unpin) — sound cue on a new event while the user is scrolled back in history
 - [ ] "Jump to top" / "Jump to bottom" buttons (keyboard: `g g` / `G`)
-- [ ] Timestamp relative per message, hover → absolute ISO
-- [ ] Truncate pojedynczego pola tekstowego > 10 MB → "show more" button, wtedy full content (nie trzymamy w RAM od początku — on-demand fetch)
-- [ ] Copy button na każdej wiadomości + copy-code na blokach
+- [ ] Relative timestamp per message, hover → absolute ISO
+- [ ] Truncate a single text field > 10 MB → "show more" button, which then fetches the full content on demand (we don't keep the whole blob in RAM up front)
+- [ ] Copy button on each message + copy-code on code blocks
 
-### Testy
+### Tests
 
-- [ ] `tests/unit/conversation/*.test.tsx` — snapshot test dla każdego renderera (8 plików)
-- [ ] `tests/unit/search.test.ts` — 1000 wiadomości, case-insensitive match, perf < 50 ms
+- [ ] `tests/unit/conversation/*.test.tsx` — snapshot test per renderer (8 files)
+- [ ] `tests/unit/search.test.ts` — 1000 messages, case-insensitive match, perf < 50 ms
 - [ ] `tests/e2e/phase-3-smoke.spec.ts`:
-  - otwieram sesję (200 wiadomości z fixture)
-  - widzę pierwsze 10 wiadomości < 300 ms after click
+  - open a session (200 messages from fixture)
+  - first 10 messages visible < 300 ms after click
   - scroll: FPS > 30 (playwright performance API)
-  - klik na tool_use expanduje
-  - search "token" podświetla matches, next/prev działa
-  - XSS: fixture z `<img src=x onerror=alert(1)>` w assistant → renderowane jako text (rehype-sanitize)
+  - clicking tool_use expands it
+  - search "token" highlights matches, prev/next navigates
+  - XSS: fixture with `<img src=x onerror=alert(1)>` in assistant content → rendered as text (rehype-sanitize)
 
 ## Security gate
 
-- [ ] **Żadnego `dangerouslySetInnerHTML`** z user input (grep wyegzekwuje)
-- [ ] `rehype-sanitize` na każdym markdown render (react-markdown plugin config check)
-- [ ] Tool output z `<script>` → text, nie exec (playwright alert listener: zero triggerów)
-- [ ] Pole > 10 MB truncate, full content **nie** w React state (on-demand)
-- [ ] Shiki nie używa `eval`/`new Function` (manual review + CSP nie triggeruje violation)
-- [ ] Link w markdown (`[x](javascript:alert)`) → stripped przez rehype-sanitize
+- [ ] **No `dangerouslySetInnerHTML`** with user input (enforced by grep)
+- [ ] `rehype-sanitize` on every markdown render (check react-markdown plugin config)
+- [ ] Tool output containing `<script>` → text, never executed (playwright alert listener: zero triggers)
+- [ ] Fields > 10 MB truncated; the full content stays **out** of React state (on-demand fetch)
+- [ ] Shiki does not use `eval` / `new Function` (manual review + CSP does not fire a violation)
+- [ ] Markdown links (`[x](javascript:alert)`) → stripped by rehype-sanitize
 
 ## Deliverables
 
 - `git tag phase-3-done`
-- Demo GIF scrollowania 2000 wiadomości w PR
-- Playwright + unit zielone
+- Demo GIF of scrolling 2000 messages in the PR
+- Playwright + unit green

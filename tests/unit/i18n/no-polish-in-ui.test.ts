@@ -3,7 +3,7 @@ import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
 const ROOT = resolve(__dirname, '../../..');
-const TARGETS = ['app', 'components', 'lib', 'hooks', 'stores', 'tests'] as const;
+const TARGETS = ['app', 'components', 'lib', 'hooks', 'stores', 'tests', 'docs'] as const;
 const POLISH = /[ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]/;
 const SELF = resolve(__dirname, 'no-polish-in-ui.test.ts');
 
@@ -15,7 +15,7 @@ function walk(dir: string): string[] {
     if (st.isDirectory()) {
       if (entry === 'node_modules' || entry === '.next') continue;
       out.push(...walk(full));
-    } else if (/\.(ts|tsx)$/.test(entry)) {
+    } else if (/\.(ts|tsx|md)$/.test(entry)) {
       out.push(full);
     }
   }
