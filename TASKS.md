@@ -338,7 +338,7 @@ next `[ ]`. Never reorder or delete tasks — only check them off.
 
 ### T24 — Platform helpers + macOS shell/paths plumbing
 
-- [ ] **Goal:** centralize OS differences in a single module so launcher,
+- [x] **Goal:** centralize OS differences in a single module so launcher,
       PTY and installer never branch on `process.platform` inline. Ship
       macOS parity for shell default, runtime directory and Chromium path.
 - **Touch:** new `lib/server/platform.ts`; `bin/claude-ui` (XDG/tmpdir
@@ -386,7 +386,7 @@ multiarch@latest`, verify `node_modules/@homebridge/.../prebuilds/`
 
 ### T26 — `claude-ui install` Node-based installer
 
-- [ ] **Goal:** single-command setup for a fresh Linux or macOS system.
+- [x] **Goal:** single-command setup for a fresh Linux or macOS system.
       `npx claude-ui-install` detects OS, verifies deps, builds, creates a
       symlink in `~/.local/bin/claude-ui` without ever running arbitrary
       shell strings or touching the user's shell rc.
