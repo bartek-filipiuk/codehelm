@@ -17,6 +17,17 @@ export type TerminalFontSize = (typeof TERMINAL_FONT_SIZES)[number];
 export type ViewerDensity = (typeof VIEWER_DENSITIES)[number];
 export type Theme = (typeof THEMES)[number];
 
+export interface TerminalQuickAction {
+  label: string;
+  command: string;
+}
+
+export const TERMINAL_QUICK_ACTION_LIMITS = {
+  maxActions: 12,
+  maxLabelLength: 40,
+  maxCommandLength: 400,
+} as const;
+
 export interface Settings {
   viewerFontSize: ViewerFontSize;
   terminalFontSize: TerminalFontSize;
@@ -25,7 +36,15 @@ export interface Settings {
   modelPricing: ModelPricing;
   hiddenCategories: EventCategory[];
   timestampFormat: TimestampFormat;
+  terminalQuickActions: TerminalQuickAction[];
 }
+
+export const DEFAULT_TERMINAL_QUICK_ACTIONS: TerminalQuickAction[] = [
+  { label: 'git status', command: 'git status' },
+  { label: 'git log', command: 'git log --oneline -10' },
+  { label: 'pnpm test', command: 'pnpm test' },
+  { label: 'pnpm dev', command: 'pnpm dev' },
+];
 
 export const DEFAULT_SETTINGS: Settings = {
   viewerFontSize: 'md',
@@ -35,6 +54,7 @@ export const DEFAULT_SETTINGS: Settings = {
   modelPricing: DEFAULT_MODEL_PRICING,
   hiddenCategories: [],
   timestampFormat: 'relative',
+  terminalQuickActions: DEFAULT_TERMINAL_QUICK_ACTIONS,
 };
 
 const nonNegative = z.number().nonnegative().finite();
@@ -53,6 +73,11 @@ const ModelPricingSchema = z.object(
   >,
 );
 
+const TerminalQuickActionSchema = z.object({
+  label: z.string().trim().min(1).max(TERMINAL_QUICK_ACTION_LIMITS.maxLabelLength),
+  command: z.string().min(1).max(TERMINAL_QUICK_ACTION_LIMITS.maxCommandLength),
+});
+
 export const SettingsSchema = z.object({
   viewerFontSize: z.enum(VIEWER_FONT_SIZES),
   terminalFontSize: z.union([z.literal(12), z.literal(13), z.literal(14), z.literal(16)]),
@@ -61,6 +86,9 @@ export const SettingsSchema = z.object({
   modelPricing: ModelPricingSchema,
   hiddenCategories: z.array(z.enum(EVENT_CATEGORIES)),
   timestampFormat: z.enum(TIMESTAMP_FORMATS),
+  terminalQuickActions: z
+    .array(TerminalQuickActionSchema)
+    .max(TERMINAL_QUICK_ACTION_LIMITS.maxActions),
 });
 
 export const SettingsPatchSchema = SettingsSchema.partial();

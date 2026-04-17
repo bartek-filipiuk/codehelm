@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Viewer } from './Viewer';
 import { TabBar } from '@/app/(ui)/terminal/TabBar';
 import { TabManager } from '@/app/(ui)/terminal/TabManager';
+import { QuickActions } from '@/app/(ui)/terminal/QuickActions';
 import { MarkdownEditor } from '@/app/(ui)/editor/MarkdownEditor';
 
 type Mode = 'viewer' | 'terminal' | 'editor';
@@ -85,7 +86,12 @@ export function MainPanel() {
           )}
         </div>
       </header>
-      {mode === 'terminal' && <TabBar onNewTab={newShellTab} />}
+      {mode === 'terminal' && (
+        <>
+          <TabBar onNewTab={newShellTab} />
+          <QuickActions />
+        </>
+      )}
       <div className="min-h-0 flex-1">
         {mode === 'terminal' ? <TabManager /> : mode === 'editor' ? <MarkdownEditor /> : <Viewer />}
       </div>

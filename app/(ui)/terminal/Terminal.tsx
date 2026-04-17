@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { usePty, type PtyStatus } from '@/hooks/use-pty';
 import { useSettings } from '@/hooks/use-settings';
+import { useTerminalStore } from '@/stores/terminal-slice';
 import { toastInfo } from '@/lib/ui/toast';
 
 export interface TerminalProps {
@@ -14,11 +15,42 @@ export interface TerminalProps {
   args?: string[];
   /** Command typed into PTY stdin after it becomes ready. */
   initCommand?: string;
+  /**
+   * When set, the terminal registers its write function in the terminal
+   * store keyed by this id. External consumers (quick actions) can then
+   * `sendToActive` without prop-drilling.
+   */
+  tabId?: string;
 }
 
 const RESIZE_DEBOUNCE_MS = 100;
 
-export function Terminal({ cwd, shell, args, initCommand }: TerminalProps) {
+export function Terminal({ cwd, shell, args, initCommand, tabId }: TerminalProps) {
+  const registerWriter = useTerminalStore((s) => s.registerWriter);
+  const unregisterWriter = useTerminalStore((s) => s.unregisterWriter);
+  const [gitStatus, setGitStatus] = useState<{ branch: string | null; dirty: boolean } | null>(
+    null,
+  );
+
+  const fetchGitStatus = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/git/status?cwd=${encodeURIComponent(cwd)}`, {
+        credentials: 'same-origin',
+      });
+      if (!res.ok) {
+        setGitStatus(null);
+        return;
+      }
+      const body = (await res.json()) as { branch: string | null; dirty: boolean };
+      setGitStatus(body);
+    } catch {
+      setGitStatus(null);
+    }
+  }, [cwd]);
+
+  useEffect(() => {
+    void fetchGitStatus();
+  }, [fetchGitStatus]);
   const hostRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<import('@xterm/xterm').Terminal | null>(null);
   const fitRef = useRef<import('@xterm/addon-fit').FitAddon | null>(null);
@@ -42,6 +74,13 @@ export function Terminal({ cwd, shell, args, initCommand }: TerminalProps) {
       }
     },
   });
+
+  // Publish our write function to the store so quick actions can reach us.
+  useEffect(() => {
+    if (!tabId) return;
+    registerWriter(tabId, write);
+    return () => unregisterWriter(tabId);
+  }, [tabId, write, registerWriter, unregisterWriter]);
 
   // Mount xterm exactly once.
   useEffect(() => {
@@ -160,7 +199,20 @@ export function Terminal({ cwd, shell, args, initCommand }: TerminalProps) {
   return (
     <div className="flex h-full min-h-0 flex-col bg-neutral-950">
       <div className="flex items-center justify-between border-b border-neutral-800 px-3 py-1.5 text-xs text-neutral-500">
-        <span className="font-mono">{cwd}</span>
+        <span className="flex min-w-0 items-center gap-2">
+          <span className="truncate font-mono">{cwd}</span>
+          {gitStatus?.branch && (
+            <button
+              type="button"
+              onClick={() => void fetchGitStatus()}
+              className="inline-flex items-center gap-1 rounded border border-neutral-700 bg-neutral-900 px-1.5 py-0.5 font-mono text-[10px] text-neutral-300 hover:border-neutral-600 hover:text-neutral-100"
+              title={gitStatus.dirty ? `${gitStatus.branch} (dirty)` : gitStatus.branch}
+            >
+              <span>{gitStatus.branch}</span>
+              {gitStatus.dirty && <span className="text-amber-400">●</span>}
+            </button>
+          )}
+        </span>
         <span className="flex items-center gap-2">
           <StatusBadge status={status} />
           <Button size="sm" variant="ghost" onClick={handleClear} title="Clear buffer">

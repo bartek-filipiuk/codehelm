@@ -31,6 +31,7 @@ export function TabManager() {
         >
           <Terminal
             cwd={t.cwd}
+            tabId={t.id}
             {...(t.shell ? { shell: t.shell } : {})}
             {...(t.args ? { args: t.args } : {})}
             {...(t.initCommand ? { initCommand: t.initCommand } : {})}

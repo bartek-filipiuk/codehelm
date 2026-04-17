@@ -260,7 +260,7 @@ next `[ ]`. Never reorder or delete tasks — only check them off.
 
 ### T19 — Terminal quick-actions row
 
-- [ ] **Goal:** narrow row above the active `<Terminal />` with buttons
+- [x] **Goal:** narrow row above the active `<Terminal />` with buttons
       for predefined shell commands (global preset in Settings). Click
       types the command into the PTY and submits it.
 - **Touch:** new `app/(ui)/terminal/QuickActions.tsx`, `Settings` gains
@@ -321,7 +321,7 @@ next `[ ]`. Never reorder or delete tasks — only check them off.
 
 ### T23 — Git branch badge in terminal header
 
-- [ ] **Goal:** show current branch + dirty flag next to the cwd in
+- [x] **Goal:** show current branch + dirty flag next to the cwd in
       terminal header (e.g. `main●` for dirty, `main` for clean). Fetched
       once per tab open, refresh on manual click of the badge.
 - **Touch:** new `/api/git/status` (query param `cwd`, path-guarded to
