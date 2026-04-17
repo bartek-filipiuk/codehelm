@@ -27,12 +27,20 @@ const UserEvent = CommonMeta.extend({
   promptId: z.string().optional(),
 });
 
+const UsageSchema = z.object({
+  input_tokens: z.number().optional(),
+  output_tokens: z.number().optional(),
+  cache_creation_input_tokens: z.number().optional(),
+  cache_read_input_tokens: z.number().optional(),
+});
+
 const AssistantEvent = CommonMeta.extend({
   type: z.literal('assistant'),
   message: z.object({
     role: z.literal('assistant'),
     content: z.array(z.unknown()),
     stop_reason: z.string().nullable().optional(),
+    usage: UsageSchema.optional(),
   }),
   requestId: z.string().optional(),
 });

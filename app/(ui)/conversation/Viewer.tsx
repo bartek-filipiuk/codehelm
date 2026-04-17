@@ -17,6 +17,7 @@ import {
   type EventCategory as Category,
 } from '@/lib/jsonl/outline';
 import { Outline } from './Outline';
+import { StatsBar } from './StatsBar';
 
 const CATEGORY_LABEL: Record<Category, string> = {
   user: 'User',
@@ -101,6 +102,7 @@ export function Viewer() {
         lineHeight: 'var(--ui-viewer-line-height, 1.5)',
       }}
     >
+      <StatsBar events={events} />
       <div className="flex items-center gap-2 border-b border-neutral-800 bg-neutral-950 px-4 py-2">
         <div className="relative flex-1">
           <Input
