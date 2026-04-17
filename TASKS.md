@@ -140,7 +140,7 @@ next `[ ]`. Never reorder or delete tasks — only check them off.
 
 ### T10 — Diff-friendly tool_result for Edit/Write
 
-- [ ] **Goal:** when `tool_use.name` is `Edit`, `Write`, or
+- [x] **Goal:** when `tool_use.name` is `Edit`, `Write`, or
   `NotebookEdit`, render the paired `tool_result` as a colored diff
   (old → new) instead of raw stdout.
 - **Touch:** `components/conversation/messages.tsx` (pair tool_use to
