@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Virtuoso, type VirtuosoHandle } from 'react-virtuoso';
 import { useSessionStream } from '@/hooks/use-session-stream';
 import { useUiStore } from '@/stores/ui-slice';
@@ -30,6 +30,8 @@ const CATEGORY_LABEL: Record<Category, string> = {
 export function Viewer() {
   const slug = useUiStore((s) => s.selectedProjectSlug);
   const sessionId = useUiStore((s) => s.selectedSessionId);
+  const pendingEventIndex = useUiStore((s) => s.pendingEventIndex);
+  const consumePendingEvent = useUiStore((s) => s.consumePendingEvent);
   const { events, loading, error, done, bytes } = useSessionStream(slug, sessionId);
   const [query, setQuery] = useState('');
   const [hitIndex, setHitIndex] = useState(0);
@@ -53,6 +55,24 @@ export function Viewer() {
   // Hit-set used both for navigation and for "only hits" mode.
   const hits = useMemo(() => searchInEvents(events, query, { limit: 500 }), [events, query]);
   const hitEventIndexSet = useMemo(() => new Set(hits.map((h) => h.eventIndex)), [hits]);
+
+  // Consume a one-shot jump request from the Graph (or any producer). Runs when
+  // the event index lands within the currently loaded event list. All state
+  // mutations are deferred so they don't happen synchronously in the effect body.
+  useEffect(() => {
+    if (pendingEventIndex == null) return;
+    if (pendingEventIndex >= events.length) return;
+    const target = pendingEventIndex;
+    queueMicrotask(() => {
+      setFollow(false);
+      setHidden((prev) => (prev.size === 0 ? prev : new Set()));
+      setOnlyHits((prev) => (prev ? false : prev));
+      queueMicrotask(() => {
+        virtuosoRef.current?.scrollToIndex({ index: target, align: 'center' });
+        consumePendingEvent();
+      });
+    });
+  }, [pendingEventIndex, events.length, consumePendingEvent]);
 
   // Filter events (kept as pairs so navigation can still hop into filtered list).
   const visibleEvents = useMemo(() => {
