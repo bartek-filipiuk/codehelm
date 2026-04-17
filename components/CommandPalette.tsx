@@ -21,6 +21,7 @@ import {
   CommandList,
 } from '@/components/ui/command';
 import { isPaletteHotkey } from '@/lib/ui/command-palette-hotkey';
+import { toastInfo } from '@/lib/ui/toast';
 
 export interface PaletteProject {
   slug: string;
@@ -126,7 +127,12 @@ export function CommandPalette() {
 
   const closeCurrentTab = () => {
     if (!activeTabId) return;
+    const tab = useTerminalStore.getState().tabs.find((t) => t.id === activeTabId);
     closeTab(activeTabId);
+    toastInfo('Zakładka zamknięta', {
+      id: `tab-closed-${activeTabId}`,
+      ...(tab?.title ? { description: tab.title } : {}),
+    });
     setOpen(false);
   };
 

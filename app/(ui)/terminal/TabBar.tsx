@@ -3,6 +3,7 @@
 import { useTerminalStore, TERMINAL_TAB_CAP } from '@/stores/terminal-slice';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { toastInfo } from '@/lib/ui/toast';
 
 interface Props {
   onNewTab?: () => void;
@@ -13,6 +14,15 @@ export function TabBar({ onNewTab }: Props) {
   const activeId = useTerminalStore((s) => s.activeTabId);
   const setActive = useTerminalStore((s) => s.setActive);
   const closeTab = useTerminalStore((s) => s.closeTab);
+
+  const closeWithToast = (id: string) => {
+    const tab = useTerminalStore.getState().tabs.find((t) => t.id === id);
+    closeTab(id);
+    toastInfo('Zakładka zamknięta', {
+      id: `tab-closed-${id}`,
+      ...(tab?.title ? { description: tab.title } : {}),
+    });
+  };
 
   return (
     <div className="flex items-center gap-1 border-b border-neutral-800 bg-neutral-950 px-2 py-1">
@@ -25,7 +35,7 @@ export function TabBar({ onNewTab }: Props) {
             onMouseDown={(e) => {
               if (e.button === 1) {
                 e.preventDefault();
-                closeTab(t.id);
+                closeWithToast(t.id);
               }
             }}
             className={cn(
@@ -48,7 +58,7 @@ export function TabBar({ onNewTab }: Props) {
               aria-label="Zamknij zakładkę"
               onClick={(e) => {
                 e.stopPropagation();
-                closeTab(t.id);
+                closeWithToast(t.id);
               }}
               className="rounded px-1 text-neutral-500 hover:bg-neutral-700 hover:text-neutral-100"
             >

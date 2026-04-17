@@ -7,6 +7,7 @@ import { useUiStore } from '@/stores/ui-slice';
 import { useClaudeMd, useSaveClaudeMd } from '@/hooks/use-claude-md';
 import { Markdown } from '@/components/conversation/Markdown';
 import { loadLayout, patchLayout } from '@/lib/ui/layout-storage';
+import { toastError, toastSuccess, toastWarning } from '@/lib/ui/toast';
 
 type EditorTarget = 'project' | 'global';
 
@@ -29,8 +30,6 @@ export function MarkdownEditor() {
   const [mounted, setMounted] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [lastMtime, setLastMtime] = useState<string | null>(null);
-  const [conflict, setConflict] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<boolean>(false);
   const [previewText, setPreviewText] = useState<string>('');
 
@@ -108,14 +107,10 @@ export function MarkdownEditor() {
     setPreviewText(query.data.content);
     setLastMtime(query.data.mtime);
     setDirty(false);
-    setConflict(false);
-    setError(null);
   }, [mounted, query.data]);
 
   const doSave = async () => {
     if (!getDocRef.current || save.isPending) return;
-    setError(null);
-    setConflict(false);
     try {
       const res = await save.mutateAsync({
         content: getDocRef.current(),
@@ -123,10 +118,27 @@ export function MarkdownEditor() {
       });
       setLastMtime(res.mtime);
       setDirty(false);
+      toastSuccess('CLAUDE.md zapisany', { id: 'claude-md-save' });
     } catch (err) {
       const e = err as { code?: string };
-      if (e.code === 'conflict') setConflict(true);
-      else setError(e.code ?? 'save_failed');
+      if (e.code === 'conflict') {
+        toastWarning('Plik zmienił się na dysku', {
+          id: 'claude-md-conflict',
+          description: 'Pobierz najnowszą wersję (stracisz bieżące edycje).',
+          duration: 8000,
+          action: {
+            label: 'Reload',
+            onClick: () => {
+              void query.refetch();
+            },
+          },
+        });
+      } else {
+        toastError('Błąd zapisu CLAUDE.md', {
+          id: 'claude-md-save-error',
+          description: e.code ?? 'save_failed',
+        });
+      }
     }
   };
 
@@ -175,7 +187,6 @@ export function MarkdownEditor() {
             {query.data?.path ?? ''}
           </span>
           {dirty && <span className="text-[10px] text-amber-400">● unsaved</span>}
-          {!dirty && lastMtime && <span className="text-[10px] text-neutral-500">Saved</span>}
           <Button
             size="sm"
             variant={preview ? 'secondary' : 'ghost'}
@@ -190,20 +201,6 @@ export function MarkdownEditor() {
           </Button>
         </div>
       </div>
-      {conflict && (
-        <div className="border-b border-amber-800 bg-amber-900/30 px-3 py-2 text-xs text-amber-200">
-          Plik zmienił się na dysku. Kliknij &quot;Reload&quot; aby pobrać najnowszą wersję
-          (stracisz bieżące edycje).
-          <Button size="sm" variant="outline" className="ml-2" onClick={() => query.refetch()}>
-            Reload
-          </Button>
-        </div>
-      )}
-      {error && (
-        <div className="border-b border-red-800 bg-red-900/30 px-3 py-2 text-xs text-red-200">
-          Błąd zapisu: {error}
-        </div>
-      )}
       <div className="flex min-h-0 flex-1">
         <div className="relative min-h-0 flex-1">
           {/* Host is always in the DOM so CodeMirror's mount-time effect has

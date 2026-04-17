@@ -6,6 +6,7 @@ import { useAliases, useSetAlias } from '@/hooks/use-aliases';
 import { useUiStore } from '@/stores/ui-slice';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { toastError, toastSuccess } from '@/lib/ui/toast';
 
 /**
  * Keyed wrapper — remounts on slug change so local draft state resets
@@ -35,13 +36,11 @@ export function ProjectHeader() {
 
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(alias ?? '');
-  const [error, setError] = useState<string | null>(null);
 
   if (!slug) return null;
 
   const commit = () => {
     if (!slug) return;
-    setError(null);
     const value = draft.trim();
     if (value === (alias ?? '')) {
       setEditing(false);
@@ -50,8 +49,18 @@ export function ProjectHeader() {
     setAlias.mutate(
       { slug, alias: value === '' ? null : value },
       {
-        onSuccess: () => setEditing(false),
-        onError: (err) => setError(err.message),
+        onSuccess: () => {
+          setEditing(false);
+          toastSuccess(value === '' ? 'Alias usunięty' : 'Alias zaktualizowany', {
+            id: 'project-alias',
+          });
+        },
+        onError: (err) => {
+          toastError('Nie udało się zapisać aliasu', {
+            id: 'project-alias',
+            description: err.message,
+          });
+        },
       },
     );
   };
@@ -85,7 +94,6 @@ export function ProjectHeader() {
               ✕
             </Button>
           </div>
-          {error && <p className="text-[10px] text-red-400">{error}</p>}
           <p className="text-[10px] text-neutral-500">
             Enter = zapisz · Esc = anuluj · puste = usuń alias
           </p>
