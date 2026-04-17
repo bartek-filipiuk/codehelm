@@ -1,9 +1,11 @@
-# Rebranding plan: `claude-ui` → `ptybook`
+# Rebranding plan: `claude-ui` → `codehelm`
 
-Target name checked: **`ptybook`** is free across npm, pypi, github
-user/org, and has zero product/trademark hits on the open web
-(2026-04-16). Only adjacent repo is `cuplex/ptybooking` (0★, unrelated
-booking app).
+Target name: **`codehelm`**. Pre-flight verification still needed
+before any rename (npm / pypi / github user+org / trademark search /
+common product names). Previous candidate `ptybook` was dropped in
+favour of `codehelm` — no availability research has been done on the
+new name yet, so **Phase 0 starts with availability checks**; if
+`codehelm` is taken, we stop and pick again before touching any code.
 
 **Rule of thumb:** we stop saying "claude-ui" everywhere except when
 referring to Claude Code CLI's ecosystem (`~/.claude/projects/`,
@@ -13,6 +15,17 @@ referring to Claude Code CLI's ecosystem (`~/.claude/projects/`,
 
 ## Phase 0 — Safety first
 
+- **Verify `codehelm` is available.** Hard gate — if any of the
+  following hits, stop and pick another name:
+  - `npm view codehelm` returns a package (404 = free).
+  - `pip show codehelm` / pypi web lookup (`https://pypi.org/project/codehelm/`).
+  - `gh api /users/codehelm` and `gh api /orgs/codehelm` both 404.
+  - Repo search: `gh search repos codehelm --limit 10` — no hits with
+    stars or active development.
+  - Trademark search: USPTO TESS + EUIPO eSearch + basic google
+    `"codehelm" site:trademarks.*`.
+  - Domain: `codehelm.dev` / `.io` availability (nice-to-have, not
+    blocker).
 - **Disable the scheduler trigger** before any rename. If it fires
   mid-migration it will try to commit against a moving target.
 - Kill all running `./bin/claude-ui` instances locally — cookie names
@@ -21,8 +34,8 @@ referring to Claude Code CLI's ecosystem (`~/.claude/projects/`,
 ## Phase 1 — GitHub repo rename
 
 ```bash
-gh repo rename ptybook -R bartek-filipiuk/claude-ui
-git remote set-url origin https://github.com/bartek-filipiuk/ptybook.git
+gh repo rename codehelm -R bartek-filipiuk/claude-ui
+git remote set-url origin https://github.com/bartek-filipiuk/codehelm.git
 git fetch origin && git branch -u origin/main main
 ```
 
@@ -33,18 +46,18 @@ GitHub issues a permanent redirect from the old URL so existing links
 
 | Area                     | Before                       | After                      |
 | ------------------------ | ---------------------------- | -------------------------- |
-| `package.json` name      | `claude-ui`                  | `ptybook`                  |
-| `package.json` bin entry | `claude-ui`                  | `ptybook`                  |
-| Launcher script path     | `bin/claude-ui`              | `bin/ptybook`              |
-| Env var (auth token)     | `CLAUDE_UI_TOKEN`            | `PTYBOOK_TOKEN`            |
-| Env var (chromium path)  | `CLAUDE_UI_CHROMIUM`         | `PTYBOOK_CHROMIUM`         |
-| Auth cookie name         | `claude_ui_auth`             | `ptybook_auth`             |
-| CSRF cookie name         | `claude_ui_csrf`             | `ptybook_csrf`             |
-| Chromium profile dir     | `claude-ui-<uid>-<uuid>`     | `ptybook-<uid>-<uuid>`     |
-| Audit log dir            | `~/.claude/claude-ui/`       | `~/.ptybook/`              |
-| UI `<title>`             | `claude-ui`                  | `ptybook`                  |
-| UI sidebar header        | `claude-ui`                  | `ptybook`                  |
-| Logger event names       | `claude_ui_ready` etc.       | `ptybook_ready` etc.       |
+| `package.json` name      | `claude-ui`                  | `codehelm`                  |
+| `package.json` bin entry | `claude-ui`                  | `codehelm`                  |
+| Launcher script path     | `bin/claude-ui`              | `bin/codehelm`              |
+| Env var (auth token)     | `CLAUDE_UI_TOKEN`            | `CODEHELM_TOKEN`            |
+| Env var (chromium path)  | `CLAUDE_UI_CHROMIUM`         | `CODEHELM_CHROMIUM`         |
+| Auth cookie name         | `claude_ui_auth`             | `codehelm_auth`             |
+| CSRF cookie name         | `claude_ui_csrf`             | `codehelm_csrf`             |
+| Chromium profile dir     | `claude-ui-<uid>-<uuid>`     | `codehelm-<uid>-<uuid>`     |
+| Audit log dir            | `~/.claude/claude-ui/`       | `~/.codehelm/`              |
+| UI `<title>`             | `claude-ui`                  | `codehelm`                  |
+| UI sidebar header        | `claude-ui`                  | `codehelm`                  |
+| Logger event names       | `claude_ui_ready` etc.       | `codehelm_ready` etc.       |
 
 ## Phase 3 — Code that stays
 
@@ -57,7 +70,7 @@ GitHub issues a permanent redirect from the old URL so existing links
 ## Phase 4 — README + banner
 
 - Regenerate the flux-2-pro banner with the same prompt but swap
-  `"claude-ui"` → `"ptybook"` in the wordmark. Overwrite
+  `"claude-ui"` → `"codehelm"` in the wordmark. Overwrite
   `screens/banner.webp`.
 - Global find-replace in README, with manual review to avoid touching
   "Claude Code CLI" references.
@@ -84,14 +97,14 @@ GitHub issues a permanent redirect from the old URL so existing links
 ## Phase 7 — Scheduler re-enable
 
 Update the `claude-ui-nightly-worker` trigger:
-- Rename to `ptybook-nightly-worker`.
-- Prompt URL: `https://github.com/bartek-filipiuk/ptybook`.
+- Rename to `codehelm-nightly-worker`.
+- Prompt URL: `https://github.com/bartek-filipiuk/codehelm`.
 - Flip `enabled: true` once smoke passes.
 
 ## Phase 8 — Smoke test
 
 ```bash
-./bin/ptybook
+./bin/codehelm
 ```
 
 Manual checks:
@@ -106,12 +119,12 @@ Manual checks:
 
 ## Commit strategy
 
-Single commit: `chore: rename project to ptybook`. Easier review, one
+Single commit: `chore: rename project to codehelm`. Easier review, one
 rollback point, one tag:
 
 ```bash
-git tag v1.0.0-ptybook
-git push origin v1.0.0-ptybook
+git tag v1.0.0-codehelm
+git push origin v1.0.0-codehelm
 ```
 
 If something slips through, `git revert` that commit and we're back.
@@ -123,14 +136,14 @@ under the old paths:
 
 ```bash
 # keep history
-mv ~/.claude/claude-ui ~/.ptybook
+mv ~/.claude/claude-ui ~/.codehelm
 
 # or nuke it
 rm -rf ~/.claude/claude-ui
 ```
 
 Shell aliases (`.bashrc` / `.zshrc`) pointing at `claude-ui` should be
-flipped to `ptybook`.
+flipped to `codehelm`.
 
 ---
 
@@ -138,9 +151,9 @@ flipped to `ptybook`.
 
 **Audit log path.** Two options:
 
-1. `~/.ptybook/` — clean break from the CLI namespace. Logs from ptybook
+1. `~/.codehelm/` — clean break from the CLI namespace. Logs from codehelm
    get their own home. Preferred.
-2. `~/.claude/ptybook/` — keeps logs under CLI's hierarchy. Tidier from
+2. `~/.claude/codehelm/` — keeps logs under CLI's hierarchy. Tidier from
    the OS perspective but implies more coupling than we actually have.
 
 Default to option 1 unless a reason surfaces to stay nested.
