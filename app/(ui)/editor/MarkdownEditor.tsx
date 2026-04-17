@@ -4,6 +4,14 @@ import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { DiffView } from '@/components/conversation/DiffView';
 import { useUiStore } from '@/stores/ui-slice';
 import { useClaudeMd, useSaveClaudeMd } from '@/hooks/use-claude-md';
 import { Markdown } from '@/components/conversation/Markdown';
@@ -69,6 +77,7 @@ export function MarkdownEditor() {
   const [lastMtime, setLastMtime] = useState<string | null>(null);
   const [preview, setPreview] = useState<boolean>(false);
   const [previewText, setPreviewText] = useState<string>('');
+  const [diffOpen, setDiffOpen] = useState<boolean>(false);
 
   useEffect(() => {
     setPreview(loadLayout().editorPreview ?? false);
@@ -270,11 +279,33 @@ export function MarkdownEditor() {
           >
             Preview
           </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => setDiffOpen(true)}
+            disabled={!query.data || !mounted}
+            title="Show diff vs disk"
+          >
+            Diff
+          </Button>
           <Button size="sm" onClick={doSave} disabled={!dirty || save.isPending}>
             {save.isPending ? 'Saving…' : 'Save (Ctrl+S)'}
           </Button>
         </div>
       </div>
+      <DiffDialog
+        open={diffOpen}
+        onOpenChange={setDiffOpen}
+        diskText={query.data?.content ?? ''}
+        bufferText={getDocRef.current?.() ?? ''}
+        filePath={query.data?.path ?? null}
+        dirty={dirty}
+        isSaving={save.isPending}
+        onConfirmSave={async () => {
+          await doSave();
+          setDiffOpen(false);
+        }}
+      />
       <div className="flex min-h-0 flex-1">
         <div className="relative min-h-0 flex-1">
           {/* Host is always in the DOM so CodeMirror's mount-time effect has
@@ -301,5 +332,62 @@ export function MarkdownEditor() {
         )}
       </div>
     </div>
+  );
+}
+
+interface DiffDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  diskText: string;
+  bufferText: string;
+  filePath: string | null;
+  dirty: boolean;
+  isSaving: boolean;
+  onConfirmSave: () => void | Promise<void>;
+}
+
+function DiffDialog({
+  open,
+  onOpenChange,
+  diskText,
+  bufferText,
+  filePath,
+  dirty,
+  isSaving,
+  onConfirmSave,
+}: DiffDialogProps) {
+  const unchanged = !dirty || diskText === bufferText;
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-3xl">
+        <DialogHeader>
+          <DialogTitle>Diff vs disk</DialogTitle>
+          <DialogDescription>
+            {filePath ? (
+              <span className="font-mono text-[11px]">{filePath}</span>
+            ) : (
+              'Compare the current buffer with what is on disk.'
+            )}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="max-h-[60vh] overflow-auto rounded border border-neutral-800 bg-neutral-950 p-2">
+          {unchanged ? (
+            <p className="p-4 text-center text-sm text-neutral-400" data-testid="diff-unchanged">
+              No changes to save.
+            </p>
+          ) : (
+            <DiffView oldText={diskText} newText={bufferText} label="CLAUDE.md" />
+          )}
+        </div>
+        <div className="flex items-center justify-end gap-2">
+          <Button size="sm" variant="ghost" onClick={() => onOpenChange(false)}>
+            Close
+          </Button>
+          <Button size="sm" onClick={() => void onConfirmSave()} disabled={unchanged || isSaving}>
+            {isSaving ? 'Saving…' : 'Save'}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
