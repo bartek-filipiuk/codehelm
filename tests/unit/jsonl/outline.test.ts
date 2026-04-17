@@ -14,9 +14,9 @@ function ev<T extends JsonlEvent['type']>(e: Extract<JsonlEvent, { type: T }>): 
 
 describe('categorizeEvent', () => {
   it('plain user message → user', () => {
-    expect(
-      categorizeEvent(ev({ type: 'user', message: { role: 'user', content: 'hi' } })),
-    ).toBe('user');
+    expect(categorizeEvent(ev({ type: 'user', message: { role: 'user', content: 'hi' } }))).toBe(
+      'user',
+    );
   });
   it('user with embedded tool_result → tools', () => {
     expect(

@@ -1,9 +1,5 @@
 import { z } from 'zod';
-import {
-  DEFAULT_MODEL_PRICING,
-  MODEL_RATE_KEYS,
-  type ModelPricing,
-} from '@/lib/jsonl/usage';
+import { DEFAULT_MODEL_PRICING, MODEL_RATE_KEYS, type ModelPricing } from '@/lib/jsonl/usage';
 import { EVENT_CATEGORIES, type EventCategory } from '@/lib/jsonl/outline';
 import { TIMESTAMP_FORMATS, type TimestampFormat } from '@/lib/jsonl/format-timestamp';
 

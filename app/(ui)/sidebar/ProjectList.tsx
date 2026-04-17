@@ -3,11 +3,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { ChevronDown, ChevronRight, Star } from 'lucide-react';
 import { useProjects, type ProjectSummary } from '@/hooks/use-projects';
-import {
-  useProjectMeta,
-  useSetProjectMeta,
-  type ProjectMetaMap,
-} from '@/hooks/use-project-meta';
+import { useProjectMeta, useSetProjectMeta, type ProjectMetaMap } from '@/hooks/use-project-meta';
 import { useSessions } from '@/hooks/use-sessions';
 import { useUiStore } from '@/stores/ui-slice';
 import { Button } from '@/components/ui/button';
@@ -285,7 +281,8 @@ function ProjectItem({
   const path = project.resolvedCwd ?? project.displayPath;
   const primary = alias ?? path;
   const tooltipBase = `${alias ? alias + '\n' : ''}${path}\nslug: ${project.slug}`;
-  const tooltip = costUsd !== null ? `${tooltipBase}\nszacowany koszt: ${formatUsd(costUsd)}` : tooltipBase;
+  const tooltip =
+    costUsd !== null ? `${tooltipBase}\nszacowany koszt: ${formatUsd(costUsd)}` : tooltipBase;
   return (
     <li
       className={cn(

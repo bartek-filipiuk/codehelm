@@ -10,7 +10,12 @@ afterEach(() => cleanup());
 describe('DiffView', () => {
   it('renderuje dodane linie jako zielone i usunięte jako czerwone', () => {
     const { container } = render(
-      <DiffView oldText={'alpha\nbeta\n'} newText={'alpha\ngamma\n'} label="Edit" filePath="/x.ts" />,
+      <DiffView
+        oldText={'alpha\nbeta\n'}
+        newText={'alpha\ngamma\n'}
+        label="Edit"
+        filePath="/x.ts"
+      />,
     );
     expect(container.querySelector('[data-testid="diff-view"]')).not.toBeNull();
     expect(container.querySelector('.diff-added')).not.toBeNull();
@@ -19,9 +24,7 @@ describe('DiffView', () => {
   });
 
   it('pokazuje licznik + / -', () => {
-    const { container } = render(
-      <DiffView oldText={'a\nb\n'} newText={'a\nc\n'} label="Edit" />,
-    );
+    const { container } = render(<DiffView oldText={'a\nb\n'} newText={'a\nc\n'} label="Edit" />);
     expect(container.textContent).toMatch(/\+1/);
     expect(container.textContent).toMatch(/-1/);
   });

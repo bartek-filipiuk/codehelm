@@ -2,11 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '@/components/common/csrf';
-import {
-  DEFAULT_SETTINGS,
-  type Settings,
-  type SettingsPatch,
-} from '@/lib/settings/types';
+import { DEFAULT_SETTINGS, type Settings, type SettingsPatch } from '@/lib/settings/types';
 
 const SETTINGS_KEY = ['settings'] as const;
 

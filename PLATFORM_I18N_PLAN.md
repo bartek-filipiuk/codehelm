@@ -15,16 +15,17 @@ Rebranding `claude-ui → ptybook` jest **osobny** (`REBRANDING_PLAN.md`). Kolej
 
 ## Decyzje (ustalone z userem)
 
-| Obszar | Decyzja |
-|---|---|
-| Target OS | Linux + macOS; Windows only via WSL (tylko sekcja w README) |
-| Installer | Node-based `npx claude-ui-install` (po rebrandzie `npx ptybook install`) |
-| i18n | English-only, rip & replace, brak biblioteki |
-| Komentarze | Tłumaczymy wszystkie na angielski |
+| Obszar     | Decyzja                                                                  |
+| ---------- | ------------------------------------------------------------------------ |
+| Target OS  | Linux + macOS; Windows only via WSL (tylko sekcja w README)              |
+| Installer  | Node-based `npx claude-ui-install` (po rebrandzie `npx ptybook install`) |
+| i18n       | English-only, rip & replace, brak biblioteki                             |
+| Komentarze | Tłumaczymy wszystkie na angielski                                        |
 
 ## Audit findings
 
 **Blokery macOS (z Explore):**
+
 1. `node-pty` — `@homebridge/node-pty-prebuilt-multiarch@0.12.0` nie ma darwin prebuildów per `package.json`. `pnpm install` na Macu próbuje node-gyp, zwykle pada.
 2. Chromium discovery w `bin/claude-ui:62–77` pomija `/Applications/Google Chrome.app/Contents/MacOS/Google Chrome` oraz `Chromium.app`.
 3. `lib/pty/spawn.ts:23` fallbackuje na `/bin/bash`; macOS domyślnie `zsh`. Przy ustawionym `$SHELL` działa.
@@ -32,6 +33,7 @@ Rebranding `claude-ui → ptybook` jest **osobny** (`REBRANDING_PLAN.md`). Kolej
 5. Signal handling (SIGHUP/SIGTERM/SIGINT) — działa na macOS bez zmian (POSIX).
 
 **i18n (z Explore):**
+
 - 15 plików, ~140 unikalnych polskich stringów, wszystko w JSX.
 - Największe skupiska: `SettingsDialog.tsx` (21), `CommandPalette.tsx` (14), `StatsBar.tsx` (14), `ProjectList.tsx` (12), `HelpOverlay.tsx` (10).
 - `lib/jsonl/format-timestamp.ts` używa `Intl.RelativeTimeFormat('pl')` — zamienić na `'en'`.
@@ -183,7 +185,7 @@ Rebranding `claude-ui → ptybook` jest **osobny** (`REBRANDING_PLAN.md`). Kolej
 
 - **Goal:** 11 polskich komentarzy w `lib/`, `tests/` (+ cokolwiek nowego znalezionego grepem) → angielski.
 - **Touch:** wszystkie pliki z `rg -e '[ąćęłńóśźż]' lib/ tests/ hooks/ stores/ app/api` w komentarzach.
-- **Logic:** tłumaczenie zachowujące sens (nie streszczenie) — komentarz tłumaczy *dlaczego*, nie *co*.
+- **Logic:** tłumaczenie zachowujące sens (nie streszczenie) — komentarz tłumaczy _dlaczego_, nie _co_.
 - **Security gate:** zmiana komentarzy nie dotyka kodu, ale sanity check: diff nie zawiera żadnych zmian w `.ts` poza komentarzami (`git diff --word-diff` review przed commit).
 - **Tests:** brak nowych; istniejące dalej zielone.
 - **DoD:**

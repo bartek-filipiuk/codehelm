@@ -1,9 +1,4 @@
-import {
-  aliasesFromMeta,
-  isValidAlias,
-  readMeta,
-  setProjectMeta,
-} from '@/lib/projects/meta';
+import { aliasesFromMeta, isValidAlias, readMeta, setProjectMeta } from '@/lib/projects/meta';
 
 export interface AliasMap {
   [slug: string]: string;

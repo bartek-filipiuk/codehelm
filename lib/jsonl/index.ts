@@ -5,12 +5,7 @@ import { PATHS } from '@/lib/server/config';
 import { parseJsonlStream } from './parser';
 import { createReadStream } from 'node:fs';
 import { isValidSlug, decodeSlugToDisplayPath } from './slug';
-import {
-  DEFAULT_MODEL_PRICING,
-  costForUsage,
-  extractUsage,
-  type ModelPricing,
-} from './usage';
+import { DEFAULT_MODEL_PRICING, costForUsage, extractUsage, type ModelPricing } from './usage';
 
 const SESSION_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.jsonl$/i;
 

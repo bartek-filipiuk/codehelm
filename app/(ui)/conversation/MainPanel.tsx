@@ -87,13 +87,7 @@ export function MainPanel() {
       </header>
       {mode === 'terminal' && <TabBar onNewTab={newShellTab} />}
       <div className="min-h-0 flex-1">
-        {mode === 'terminal' ? (
-          <TabManager />
-        ) : mode === 'editor' ? (
-          <MarkdownEditor />
-        ) : (
-          <Viewer />
-        )}
+        {mode === 'terminal' ? <TabManager /> : mode === 'editor' ? <MarkdownEditor /> : <Viewer />}
       </div>
     </div>
   );

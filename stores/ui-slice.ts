@@ -72,8 +72,7 @@ export const useUiStore = create<UiState>((set) => ({
   closeTerminal: () => set({ terminalOpen: false, terminalCwd: null }),
   openEditor: () => set({ editorOpen: true, terminalOpen: false }),
   closeEditor: () => set({ editorOpen: false }),
-  jumpToEvent: (index) =>
-    set({ editorOpen: false, terminalOpen: false, pendingEventIndex: index }),
+  jumpToEvent: (index) => set({ editorOpen: false, terminalOpen: false, pendingEventIndex: index }),
   consumePendingEvent: () => set({ pendingEventIndex: null }),
   setSortMode: (mode) => {
     patchLayout({ sortMode: mode });

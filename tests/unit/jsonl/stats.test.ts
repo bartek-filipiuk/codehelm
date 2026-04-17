@@ -1,9 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  computeSessionStats,
-  formatDuration,
-  formatTokens,
-} from '@/lib/jsonl/stats';
+import { computeSessionStats, formatDuration, formatTokens } from '@/lib/jsonl/stats';
 import type { JsonlEvent } from '@/lib/jsonl/types';
 
 function ev<T extends JsonlEvent['type']>(e: Extract<JsonlEvent, { type: T }>): JsonlEvent {

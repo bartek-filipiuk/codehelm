@@ -44,20 +44,20 @@ GitHub issues a permanent redirect from the old URL so existing links
 
 ## Phase 2 — Code changes (renames)
 
-| Area                     | Before                       | After                      |
-| ------------------------ | ---------------------------- | -------------------------- |
-| `package.json` name      | `claude-ui`                  | `codehelm`                  |
-| `package.json` bin entry | `claude-ui`                  | `codehelm`                  |
-| Launcher script path     | `bin/claude-ui`              | `bin/codehelm`              |
-| Env var (auth token)     | `CLAUDE_UI_TOKEN`            | `CODEHELM_TOKEN`            |
-| Env var (chromium path)  | `CLAUDE_UI_CHROMIUM`         | `CODEHELM_CHROMIUM`         |
-| Auth cookie name         | `claude_ui_auth`             | `codehelm_auth`             |
-| CSRF cookie name         | `claude_ui_csrf`             | `codehelm_csrf`             |
-| Chromium profile dir     | `claude-ui-<uid>-<uuid>`     | `codehelm-<uid>-<uuid>`     |
-| Audit log dir            | `~/.claude/claude-ui/`       | `~/.codehelm/`              |
-| UI `<title>`             | `claude-ui`                  | `codehelm`                  |
-| UI sidebar header        | `claude-ui`                  | `codehelm`                  |
-| Logger event names       | `claude_ui_ready` etc.       | `codehelm_ready` etc.       |
+| Area                     | Before                   | After                   |
+| ------------------------ | ------------------------ | ----------------------- |
+| `package.json` name      | `claude-ui`              | `codehelm`              |
+| `package.json` bin entry | `claude-ui`              | `codehelm`              |
+| Launcher script path     | `bin/claude-ui`          | `bin/codehelm`          |
+| Env var (auth token)     | `CLAUDE_UI_TOKEN`        | `CODEHELM_TOKEN`        |
+| Env var (chromium path)  | `CLAUDE_UI_CHROMIUM`     | `CODEHELM_CHROMIUM`     |
+| Auth cookie name         | `claude_ui_auth`         | `codehelm_auth`         |
+| CSRF cookie name         | `claude_ui_csrf`         | `codehelm_csrf`         |
+| Chromium profile dir     | `claude-ui-<uid>-<uuid>` | `codehelm-<uid>-<uuid>` |
+| Audit log dir            | `~/.claude/claude-ui/`   | `~/.codehelm/`          |
+| UI `<title>`             | `claude-ui`              | `codehelm`              |
+| UI sidebar header        | `claude-ui`              | `codehelm`              |
+| Logger event names       | `claude_ui_ready` etc.   | `codehelm_ready` etc.   |
 
 ## Phase 3 — Code that stays
 
@@ -97,6 +97,7 @@ GitHub issues a permanent redirect from the old URL so existing links
 ## Phase 7 — Scheduler re-enable
 
 Update the `claude-ui-nightly-worker` trigger:
+
 - Rename to `codehelm-nightly-worker`.
 - Prompt URL: `https://github.com/bartek-filipiuk/codehelm`.
 - Flip `enabled: true` once smoke passes.
@@ -108,6 +109,7 @@ Update the `claude-ui-nightly-worker` trigger:
 ```
 
 Manual checks:
+
 - Chromium opens on `127.0.0.1:<port>`, no `unauthorized` page.
 - Sidebar loads projects, alias rename works.
 - Shell tab spawns, `echo hello` echoes.

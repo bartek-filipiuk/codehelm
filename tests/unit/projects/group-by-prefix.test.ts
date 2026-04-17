@@ -10,7 +10,11 @@ import {
 import type { ProjectSummary } from '@/hooks/use-projects';
 import type { ProjectMetaMap } from '@/hooks/use-project-meta';
 
-function makeProject(slug: string, cwd: string | null, lastActivity: string | null = null): ProjectSummary {
+function makeProject(
+  slug: string,
+  cwd: string | null,
+  lastActivity: string | null = null,
+): ProjectSummary {
   return {
     slug,
     displayPath: cwd ?? `/unknown/${slug}`,

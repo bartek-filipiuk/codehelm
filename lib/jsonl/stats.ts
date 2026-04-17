@@ -85,7 +85,7 @@ export function computeSessionStats(events: readonly JsonlEvent[]): SessionStats
 
   const sortedTools: ToolCount[] = [...toolCounts.entries()]
     .map(([name, count]) => ({ name, count }))
-    .sort((a, b) => (b.count - a.count) || a.name.localeCompare(b.name));
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
 
   const durationMs = firstMs !== null && lastMs !== null ? lastMs - firstMs : null;
 
@@ -98,8 +98,7 @@ export function computeSessionStats(events: readonly JsonlEvent[]): SessionStats
     outputTokens,
     cacheCreationInputTokens,
     cacheReadInputTokens,
-    totalTokens:
-      inputTokens + outputTokens + cacheCreationInputTokens + cacheReadInputTokens,
+    totalTokens: inputTokens + outputTokens + cacheCreationInputTokens + cacheReadInputTokens,
     toolCounts: sortedTools,
   };
 }

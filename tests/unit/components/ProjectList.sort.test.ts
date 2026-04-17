@@ -3,11 +3,7 @@ import { filterAndSortProjects } from '@/app/(ui)/sidebar/ProjectList';
 import type { ProjectSummary } from '@/hooks/use-projects';
 import type { ProjectMetaMap } from '@/hooks/use-project-meta';
 
-function makeProject(
-  slug: string,
-  lastActivity: string | null,
-  sessionCount = 1,
-): ProjectSummary {
+function makeProject(slug: string, lastActivity: string | null, sessionCount = 1): ProjectSummary {
   return {
     slug,
     displayPath: `/home/bartek/${slug}`,

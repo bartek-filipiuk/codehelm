@@ -41,7 +41,10 @@ export function loadLayout(): LayoutState {
   const editorPreview = raw['editorPreview'];
   if (typeof editorPreview === 'boolean') out.editorPreview = editorPreview;
   const projectGrouping = raw['projectGrouping'];
-  if (typeof projectGrouping === 'string' && VALID_GROUPINGS.includes(projectGrouping as ProjectGrouping)) {
+  if (
+    typeof projectGrouping === 'string' &&
+    VALID_GROUPINGS.includes(projectGrouping as ProjectGrouping)
+  ) {
     out.projectGrouping = projectGrouping as ProjectGrouping;
   }
   return out;

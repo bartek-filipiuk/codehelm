@@ -1,9 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import {
-  patchSettings,
-  readSettings,
-  SettingsPatchSchema,
-} from '@/lib/settings/io';
+import { patchSettings, readSettings, SettingsPatchSchema } from '@/lib/settings/io';
 import { logger } from '@/lib/server/logger';
 
 export const dynamic = 'force-dynamic';

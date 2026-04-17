@@ -27,10 +27,7 @@ describe('layout-storage editorPreview', () => {
   });
 
   it('ignoruje nielogiczną wartość', () => {
-    window.localStorage.setItem(
-      LAYOUT_STORAGE_KEY,
-      JSON.stringify({ editorPreview: 'yes' }),
-    );
+    window.localStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify({ editorPreview: 'yes' }));
     expect(loadLayout().editorPreview).toBeUndefined();
   });
 
@@ -55,10 +52,7 @@ describe('layout-storage projectGrouping', () => {
   });
 
   it('ignores invalid stored values', () => {
-    window.localStorage.setItem(
-      LAYOUT_STORAGE_KEY,
-      JSON.stringify({ projectGrouping: 'tree' }),
-    );
+    window.localStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify({ projectGrouping: 'tree' }));
     expect(loadLayout().projectGrouping).toBeUndefined();
   });
 

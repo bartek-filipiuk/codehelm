@@ -90,10 +90,7 @@ export function CommandPalette() {
     () => sortByActivityDesc(paletteProjects).slice(0, 5),
     [paletteProjects],
   );
-  const alphabetical = React.useMemo(
-    () => sortByAliasAsc(paletteProjects),
-    [paletteProjects],
-  );
+  const alphabetical = React.useMemo(() => sortByAliasAsc(paletteProjects), [paletteProjects]);
 
   const activeProject = paletteProjects.find((p) => p.slug === selectedSlug) ?? null;
 
@@ -168,10 +165,7 @@ export function CommandPalette() {
               >
                 Otwórz CLAUDE.md (bieżący projekt)
               </CommandItem>
-              <CommandItem
-                value="open claude md globalny global"
-                onSelect={openGlobalClaudeMd}
-              >
+              <CommandItem value="open claude md globalny global" onSelect={openGlobalClaudeMd}>
                 Otwórz CLAUDE.md (globalny)
               </CommandItem>
               <CommandItem

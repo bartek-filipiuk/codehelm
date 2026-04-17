@@ -25,8 +25,8 @@ next `[ ]`. Never reorder or delete tasks — only check them off.
 ### T01 — Resolve-cwd fallback for legacy projects
 
 - [x] **Goal:** projects without a sniffable `resolvedCwd` still let
-  the user open `+ claude` / `+ shell`. Today 24/54 real projects
-  return `no_resolved_cwd` → 409.
+      the user open `+ claude` / `+ shell`. Today 24/54 real projects
+      return `no_resolved_cwd` → 409.
 - **Touch:** `lib/jsonl/index.ts` (`listProjects`, new helper
   `inferCwdFromSlug`), `app/api/sessions/new/route.ts`.
 - **Logic:** if sniff returns null, try `decodeSlugToDisplayPath(slug)`,
@@ -40,7 +40,7 @@ next `[ ]`. Never reorder or delete tasks — only check them off.
 ### T02 — Resizable panel columns
 
 - [x] **Goal:** drag borders between sidebar / sessions / viewer.
-  Widths persist in `localStorage` under `claude-ui:layout`.
+      Widths persist in `localStorage` under `claude-ui:layout`.
 - **Touch:** `app/page.tsx`, new `components/layout/ResizableColumns.tsx`
   (pure CSS grid + pointer events, no new deps).
 - **Logic:** two draggable splitters, min widths (sidebar 200, sessions
@@ -51,7 +51,7 @@ next `[ ]`. Never reorder or delete tasks — only check them off.
 ### T03 — Favorites / pin projects
 
 - [x] **Goal:** star projects, pinned ones render on top of the sidebar
-  regardless of last-activity sort.
+      regardless of last-activity sort.
 - **Touch:** extend `lib/aliases/io.ts` to a generic
   `lib/projects/meta.ts` storing `{ alias?: string, favorite?: boolean }`.
   New endpoint `/api/projects/meta` (GET, PATCH), replaces current
@@ -64,7 +64,7 @@ next `[ ]`. Never reorder or delete tasks — only check them off.
 ### T04 — Sort toggle in sidebar
 
 - [x] **Goal:** dropdown in sidebar header: "Last activity" (default) /
-  "Name" (alias or path) / "Session count".
+      "Name" (alias or path) / "Session count".
 - **Touch:** `app/(ui)/sidebar/ProjectList.tsx`, small `Select`
   component in `components/ui/select.tsx` (Radix-based if not present —
   otherwise native `<select>` styled).
@@ -88,8 +88,8 @@ next `[ ]`. Never reorder or delete tasks — only check them off.
 ### T06 — Command palette (Ctrl+K)
 
 - [x] **Goal:** power-user switcher. Cmd shows recent projects, all
-  projects by alias, "New shell in current project", "Open CLAUDE.md
-  (global)", "Open CLAUDE.md (current project)", "Close current tab".
+      projects by alias, "New shell in current project", "Open CLAUDE.md
+      (global)", "Open CLAUDE.md (current project)", "Close current tab".
 - **Touch:** `components/ui/command.tsx` is already shadcn `cmdk` — wrap
   it in a dialog trigger. New `components/CommandPalette.tsx`.
 - **Logic:** Ctrl+K / Cmd+K opens. Fuzzy filter built into cmdk.
@@ -101,7 +101,7 @@ next `[ ]`. Never reorder or delete tasks — only check them off.
 ### T07 — Session outline / minimap
 
 - [x] **Goal:** narrow column right of the viewer showing a marker per
-  event (colored by category, height ≈ content length). Click jumps.
+      event (colored by category, height ≈ content length). Click jumps.
 - **Touch:** new `app/(ui)/conversation/Outline.tsx`, mount in `Viewer`
   next to `Virtuoso`. Virtuoso's `scrollToIndex` already accessible.
 - **Visuals:** max 40 px wide; each marker a `div` with `min-height: 2px`,
@@ -113,8 +113,8 @@ next `[ ]`. Never reorder or delete tasks — only check them off.
 ### T08 — Settings modal (fonts + density + theme)
 
 - [x] **Goal:** single Settings dialog (gear icon top-right of sidebar
-  header), writes `~/.claude/claude-ui/settings.json` (mode 0600 via
-  new `lib/settings/io.ts`, atomic write).
+      header), writes `~/.claude/claude-ui/settings.json` (mode 0600 via
+      new `lib/settings/io.ts`, atomic write).
 - **Options:**
   - Viewer font size (xs / sm / md / lg)
   - Terminal font size (12 / 13 / 14 / 16 px)
@@ -129,8 +129,8 @@ next `[ ]`. Never reorder or delete tasks — only check them off.
 ### T09 — Session stats bar
 
 - [x] **Goal:** above the viewer, an expandable row showing: duration
-  (first → last event), total tokens (sum from assistant events if
-  `usage` present), top 5 tools by call count.
+      (first → last event), total tokens (sum from assistant events if
+      `usage` present), top 5 tools by call count.
 - **Touch:** new `app/(ui)/conversation/StatsBar.tsx`, computed from
   the already-loaded `events` array. No API changes.
 - **Visuals:** collapsed row ~24 px tall with "2h 14min · 180 events
@@ -141,8 +141,8 @@ next `[ ]`. Never reorder or delete tasks — only check them off.
 ### T10 — Diff-friendly tool_result for Edit/Write
 
 - [x] **Goal:** when `tool_use.name` is `Edit`, `Write`, or
-  `NotebookEdit`, render the paired `tool_result` as a colored diff
-  (old → new) instead of raw stdout.
+      `NotebookEdit`, render the paired `tool_result` as a colored diff
+      (old → new) instead of raw stdout.
 - **Touch:** `components/conversation/messages.tsx` (pair tool_use to
   subsequent tool_result via `tool_use_id`), new
   `components/conversation/DiffView.tsx` — use `diff` npm package.
@@ -153,8 +153,8 @@ next `[ ]`. Never reorder or delete tasks — only check them off.
 ### T11 — Markdown preview in CLAUDE.md editor
 
 - [x] **Goal:** toggle button "Preview" in editor header that splits
-  the view 50/50: left CodeMirror, right rendered markdown (same
-  renderer as assistant messages — react-markdown + rehype-sanitize).
+      the view 50/50: left CodeMirror, right rendered markdown (same
+      renderer as assistant messages — react-markdown + rehype-sanitize).
 - **Touch:** `app/(ui)/editor/MarkdownEditor.tsx`, reuse
   `components/conversation/Markdown.tsx`.
 - **DoD:** toggle persists in settings store (bonus: per file type).
@@ -164,8 +164,8 @@ next `[ ]`. Never reorder or delete tasks — only check them off.
 ### T12 — Toast notifications (shadcn Sonner)
 
 - [x] **Goal:** replace silent "Saved" badges / inline error bars with
-  a single toast system. Triggers: CLAUDE.md saved / conflict, alias
-  updated, WS reconnect, tab kill.
+      a single toast system. Triggers: CLAUDE.md saved / conflict, alias
+      updated, WS reconnect, tab kill.
 - **Touch:** `pnpm add sonner`, mount `<Toaster />` in `Providers`,
   new `lib/ui/toast.ts` thin wrapper. Replace existing ad-hoc banners
   with toast calls.
@@ -175,8 +175,8 @@ next `[ ]`. Never reorder or delete tasks — only check them off.
 ### T13 — Conversation graph (effectful)
 
 - [x] **Goal:** new viewer mode "Graph". Visualize a session as a DAG:
-  user messages are nodes on the main axis, assistant messages branch
-  off, tool_use calls hang as leaves under their assistant node.
+      user messages are nodes on the main axis, assistant messages branch
+      off, tool_use calls hang as leaves under their assistant node.
 - **Touch:** new `app/(ui)/conversation/Graph.tsx` using `reactflow`
   (`pnpm add reactflow`) — pure client, lazy import. Extend MainPanel
   mode switcher to include "Graph". No backend changes.
@@ -190,8 +190,8 @@ next `[ ]`. Never reorder or delete tasks — only check them off.
 ### T14 — Cost estimator (effectful)
 
 - [x] **Goal:** per-session and per-project estimated cost rollup based
-  on `usage.input_tokens` / `usage.output_tokens` found in assistant
-  events. Settings panel for per-model rates.
+      on `usage.input_tokens` / `usage.output_tokens` found in assistant
+      events. Settings panel for per-model rates.
 - **Touch:** `lib/jsonl/usage.ts` (extract usage blocks), new column
   in session list ("$X.XX"), aggregate in sidebar tooltip, settings
   entry for rates table with sensible defaults (Opus 4 / Sonnet 4 /
@@ -202,8 +202,8 @@ next `[ ]`. Never reorder or delete tasks — only check them off.
 ### T15 — Replay mode (effectful)
 
 - [x] **Goal:** in Viewer, new button "Replay". Sessions plays back
-  event-by-event with configurable speed (1x / 2x / 5x / "real-time
-  between timestamps"). Useful for post-mortem review.
+      event-by-event with configurable speed (1x / 2x / 5x / "real-time
+      between timestamps"). Useful for post-mortem review.
 - **Touch:** `app/(ui)/conversation/Viewer.tsx` state machine, speed
   control, play/pause/scrub. Uses existing renderers — just animates
   revealing events in the Virtuoso list.
@@ -213,8 +213,8 @@ next `[ ]`. Never reorder or delete tasks — only check them off.
 ### T16 — Default event-category filters
 
 - [x] **Goal:** persist which categories (user/assistant/tools/system)
-  start hidden when a session is opened. Today user clicks chips every
-  time; power users almost always want Tools off by default.
+      start hidden when a session is opened. Today user clicks chips every
+      time; power users almost always want Tools off by default.
 - **Touch:** extend `Settings` in `lib/settings/types.ts` with
   `hiddenCategories: EventCategory[]` (default `[]`), expose in
   `components/SettingsDialog.tsx` as a row of four toggles. Seed
@@ -229,8 +229,8 @@ next `[ ]`. Never reorder or delete tasks — only check them off.
 ### T17 — Timestamp display format
 
 - [x] **Goal:** three formats for the small timestamp badge under each
-  event: `relative` ("2 min temu"), `iso` ("2026-04-16T12:00:00Z"),
-  `local` ("14:00:05", 24h). Chosen in Settings.
+      event: `relative` ("2 min temu"), `iso` ("2026-04-16T12:00:00Z"),
+      `local` ("14:00:05", 24h). Chosen in Settings.
 - **Touch:** new `lib/jsonl/format-timestamp.ts` with pure function
   `formatTimestamp(iso, mode, now)`. Extend `Settings` with
   `timestampFormat`. Use it in `components/conversation/messages.tsx`
@@ -244,9 +244,9 @@ next `[ ]`. Never reorder or delete tasks — only check them off.
 ### T18 — Project grouping by path prefix
 
 - [x] **Goal:** sidebar toggle "Flat / By folder". Grouped view collapses
-  projects by first path segment under `$HOME` (e.g. `main-projects/`,
-  `client-projects/`, `experiments/`). Pinned (favorite) projects stay
-  at the very top as their own group.
+      projects by first path segment under `$HOME` (e.g. `main-projects/`,
+      `client-projects/`, `experiments/`). Pinned (favorite) projects stay
+      at the very top as their own group.
 - **Touch:** `app/(ui)/sidebar/ProjectList.tsx`, `stores/ui-slice.ts`
   (add `projectGrouping: 'flat' | 'prefix'`, persisted via
   `patchLayout`). New helper `lib/projects/group-by-prefix.ts`.
@@ -261,8 +261,8 @@ next `[ ]`. Never reorder or delete tasks — only check them off.
 ### T19 — Terminal quick-actions row
 
 - [ ] **Goal:** narrow row above the active `<Terminal />` with buttons
-  for predefined shell commands (global preset in Settings). Click
-  types the command into the PTY and submits it.
+      for predefined shell commands (global preset in Settings). Click
+      types the command into the PTY and submits it.
 - **Touch:** new `app/(ui)/terminal/QuickActions.tsx`, `Settings` gains
   `terminalQuickActions: { label: string, command: string }[]` with
   defaults (`git status`, `git log --oneline -10`, `pnpm test`,
@@ -278,8 +278,8 @@ next `[ ]`. Never reorder or delete tasks — only check them off.
 ### T20 — Parent tool_use popover
 
 - [ ] **Goal:** clicking anywhere inside a rendered `tool_result`
-  opens a small popover showing the linked `tool_use` (tool name +
-  args, pretty-printed JSON, wrapped). Closes on outside click / Esc.
+      opens a small popover showing the linked `tool_use` (tool name +
+      args, pretty-printed JSON, wrapped). Closes on outside click / Esc.
 - **Touch:** `components/conversation/messages.tsx` — wrap the existing
   ToolResult renderer in `@radix-ui/react-popover`. Use the already-built
   `buildToolUseRegistry`. Lazy-render popover content on open.
@@ -293,8 +293,8 @@ next `[ ]`. Never reorder or delete tasks — only check them off.
 ### T21 — Diff-before-save in CLAUDE.md editor
 
 - [ ] **Goal:** in the editor header, a "Pokaż diff" button opens a
-  modal showing the colored diff between current buffer and what's on
-  disk. Save button inside the modal confirms the write.
+      modal showing the colored diff between current buffer and what's on
+      disk. Save button inside the modal confirms the write.
 - **Touch:** `app/(ui)/editor/MarkdownEditor.tsx`, reuse existing
   `components/conversation/DiffView.tsx` from T10. Fetch disk content
   through the already-returned `GET /api/claude-md` payload.
@@ -308,8 +308,8 @@ next `[ ]`. Never reorder or delete tasks — only check them off.
 ### T22 — Recent CLAUDE.md files dropdown
 
 - [ ] **Goal:** dropdown in editor header listing last 10 opened
-  CLAUDE.md paths (mixed global + per-project). Click opens that file
-  in the editor.
+      CLAUDE.md paths (mixed global + per-project). Click opens that file
+      in the editor.
 - **Touch:** new `lib/ui/recent-files.ts` (localStorage-backed, key
   `claude-ui:recent-md`, capped at 10). Hook `use-recent-files.ts`.
   `MarkdownEditor.tsx` header gains a compact Select.
@@ -322,13 +322,13 @@ next `[ ]`. Never reorder or delete tasks — only check them off.
 ### T23 — Git branch badge in terminal header
 
 - [ ] **Goal:** show current branch + dirty flag next to the cwd in
-  terminal header (e.g. `main●` for dirty, `main` for clean). Fetched
-  once per tab open, refresh on manual click of the badge.
+      terminal header (e.g. `main●` for dirty, `main` for clean). Fetched
+      once per tab open, refresh on manual click of the badge.
 - **Touch:** new `/api/git/status` (query param `cwd`, path-guarded to
   `$HOME`, rate-limited 30/min), runs `git rev-parse --abbrev-ref HEAD`
-  + `git status --porcelain -z --untracked-files=no` with a 2 s timeout.
-  `Terminal.tsx` header fetches on mount. Not inside a repo → badge
-  hidden.
+  - `git status --porcelain -z --untracked-files=no` with a 2 s timeout.
+    `Terminal.tsx` header fetches on mount. Not inside a repo → badge
+    hidden.
 - **Logic:** endpoint returns `{ branch: string | null, dirty: boolean }`.
   No polling. Errors swallowed to null → badge hidden. Command uses
   `child_process.execFile` (array args), never shell.
@@ -339,21 +339,21 @@ next `[ ]`. Never reorder or delete tasks — only check them off.
 ### T24 — Platform helpers + macOS shell/paths plumbing
 
 - [ ] **Goal:** centralize OS differences in a single module so launcher,
-  PTY and installer never branch on `process.platform` inline. Ship
-  macOS parity for shell default, runtime directory and Chromium path.
+      PTY and installer never branch on `process.platform` inline. Ship
+      macOS parity for shell default, runtime directory and Chromium path.
 - **Touch:** new `lib/server/platform.ts`; `bin/claude-ui` (XDG/tmpdir
-  + chromium lookup); `lib/pty/spawn.ts` (resolveShell). Don't touch
-  `lib/server/audit.ts` (mode 0700 already portable across Unix).
+  - chromium lookup); `lib/pty/spawn.ts` (resolveShell). Don't touch
+    `lib/server/audit.ts` (mode 0700 already portable across Unix).
 - **Logic:** `defaultShell()` returns `$SHELL` if it exists and starts
   with `/`, else `/bin/zsh` on darwin or `/bin/bash` on linux — never
   invokes a sub-shell. `runtimeRootDir()` tries `$XDG_RUNTIME_DIR` →
   `$TMPDIR` → `os.tmpdir()` and passes the result through `fs.realpath`
   before returning. `chromiumCandidates()` returns ordered paths per
   `process.platform`; on darwin: `/Applications/Google Chrome.app/
-  Contents/MacOS/Google Chrome`, `/Applications/Chromium.app/...`,
+Contents/MacOS/Google Chrome`, `/Applications/Chromium.app/...`,
   `/Applications/Arc.app/...`; on linux: `chromium`, `chromium-browser`,
   `google-chrome-stable`, `google-chrome`. Discovery must `fs.accessSync
-  (X_OK)` each candidate; no blind spawn.
+(X_OK)` each candidate; no blind spawn.
 - **DoD:** unit tests in `tests/unit/server/platform.test.ts` cover 6
   scenarios (shell fallback per OS, runtime dir with/without XDG/TMPDIR,
   chromium candidates per OS, accessSync filtering). No `shell: true`
@@ -364,12 +364,12 @@ next `[ ]`. Never reorder or delete tasks — only check them off.
 ### T25 — node-pty macOS prebuild path
 
 - [ ] **Goal:** `pnpm install --frozen-lockfile` succeeds on Linux,
-  macOS arm64 and macOS x86_64 without invoking node-gyp. Supply-chain
-  safe: no new postinstall scripts, lockfile integrity preserved.
+      macOS arm64 and macOS x86_64 without invoking node-gyp. Supply-chain
+      safe: no new postinstall scripts, lockfile integrity preserved.
 - **Touch:** `package.json`, `pnpm-lock.yaml`, optionally
   `lib/pty/spawn.ts` (imports) if API drift.
 - **Logic:** Plan A — `pnpm update @homebridge/node-pty-prebuilt-
-  multiarch@latest`, verify `node_modules/@homebridge/.../prebuilds/`
+multiarch@latest`, verify `node_modules/@homebridge/.../prebuilds/`
   lists `darwin-arm64`, `darwin-x64`, `linux-x64`, `linux-arm64`. Plan
   B (preferred if A misses darwin): switch to `node-pty@1.0.0`
   (Microsoft upstream, prebuilt for all four). API is 95% compatible:
@@ -387,18 +387,18 @@ next `[ ]`. Never reorder or delete tasks — only check them off.
 ### T26 — `claude-ui install` Node-based installer
 
 - [ ] **Goal:** single-command setup for a fresh Linux or macOS system.
-  `npx claude-ui-install` detects OS, verifies deps, builds, creates a
-  symlink in `~/.local/bin/claude-ui` without ever running arbitrary
-  shell strings or touching the user's shell rc.
+      `npx claude-ui-install` detects OS, verifies deps, builds, creates a
+      symlink in `~/.local/bin/claude-ui` without ever running arbitrary
+      shell strings or touching the user's shell rc.
 - **Touch:** new `bin/install.ts` (ESM Node script, shebang `#!/usr/bin
-  /env node`); new `lib/install/checks.ts` (pure helpers: `detectOs`,
+/env node`); new `lib/install/checks.ts` (pure helpers: `detectOs`,
   `resolveHomeBinDir`, `needsPathUpdate`); add bin entry
   `"claude-ui-install": "bin/install.ts"` in `package.json`.
 - **Logic (ordered, each step idempotent):**
   1. `process.platform` ∈ {linux, darwin}; else exit 1 with WSL note.
   2. Node version ≥ 20.11; else exit 1 suggesting `nvm install 20`.
   3. pnpm present? If not, `corepack enable` + `corepack prepare pnpm@9
-     --activate` via `spawnSync` with array args.
+--activate` via `spawnSync` with array args.
   4. `pnpm install --frozen-lockfile` (spawnSync, inherit stdio, 5 min
      timeout).
   5. Dry-load node-pty in try/catch; if fails, print repair hint and
@@ -414,7 +414,7 @@ next `[ ]`. Never reorder or delete tasks — only check them off.
   9. PATH check: if `~/.local/bin` not in `$PATH`, print shell-specific
      instruction to add it — never edit shell rc.
 - **Flags:** `--dry-run` (print plan, no writes), `--help`, `--skip-
-  build`, `--no-symlink`.
+build`, `--no-symlink`.
 - **Security:** every `spawnSync` uses `{shell: false}` with array args,
   explicit timeouts; no `exec()`. Symlink target resolved via
   `fs.realpath` and verified to point inside the repo. No env
@@ -429,12 +429,12 @@ next `[ ]`. Never reorder or delete tasks — only check them off.
 ### T27 — Rip Polish UI strings → English
 
 - [ ] **Goal:** replace all ~140 Polish UI strings in JSX with English
-  equivalents. No i18n library introduced. Regression-guard test
-  prevents Polish diacritics from re-entering the codebase.
+      equivalents. No i18n library introduced. Regression-guard test
+      prevents Polish diacritics from re-entering the codebase.
 - **Touch (15 UI files):** `app/(ui)/sidebar/{ProjectList,Search}.tsx`;
   `app/(ui)/session-explorer/{SessionList,ProjectHeader}.tsx`;
   `app/(ui)/conversation/{Viewer,Outline,StatsBar,ReplayBar,MainPanel}
-  .tsx`; `app/(ui)/terminal/{TabBar,Terminal}.tsx`;
+.tsx`; `app/(ui)/terminal/{TabBar,Terminal}.tsx`;
   `app/(ui)/editor/MarkdownEditor.tsx`;
   `components/{CommandPalette,HelpOverlay,SettingsDialog}.tsx`;
   `lib/jsonl/format-timestamp.ts` (switch `Intl.RelativeTimeFormat`
@@ -462,13 +462,13 @@ next `[ ]`. Never reorder or delete tasks — only check them off.
 ### T28 — Translate Polish code comments to English
 
 - [ ] **Goal:** remove every Polish-language comment from the
-  codebase so maintainers who don't read Polish can still reason
-  about the code.
+      codebase so maintainers who don't read Polish can still reason
+      about the code.
 - **Touch:** every file surfaced by `rg -e '[ąćęłńóśźż]' lib/ tests/
-  hooks/ stores/ app/api` whose match falls inside a `//` or `/** */`
+hooks/ stores/ app/api` whose match falls inside a `//` or `/** */`
   comment. Starting set from audit: `lib/security/host-check.ts`,
   `tests/e2e/phase-2-smoke.spec.ts` (≈11 comments total).
-- **Logic:** translations keep the *reason* not a line-by-line gloss.
+- **Logic:** translations keep the _reason_ not a line-by-line gloss.
   When a comment merely restates the code, delete it. Do not touch
   code identifiers or logic.
 - **Security:** `git diff` review before commit: confirm only comment
@@ -481,7 +481,7 @@ next `[ ]`. Never reorder or delete tasks — only check them off.
 ### T29 — Update README + docs + platform metadata
 
 - [ ] **Goal:** public documentation in English, accurately reflects
-  Linux + macOS support and the Node-based installer.
+      Linux + macOS support and the Node-based installer.
 - **Touch:** `README.md` (notably line 174 "macOS out of scope");
   `docs/ARCHITECTURE.md`, `docs/SECURITY.md`, `docs/PHASE-0.md` …
   `docs/PHASE-7.md` (translate any Polish fragments found);
@@ -490,8 +490,8 @@ next `[ ]`. Never reorder or delete tasks — only check them off.
 - **Logic:** remove "macOS out of scope for v1"; add "Platform
   support: Linux + macOS. Windows: use WSL." Install section uses
   `npx claude-ui-install` with a manual-clone fallback (`git clone`
-  + `node bin/install.ts`). Never suggest `curl ... | bash` from
-  unofficial sources.
+  - `node bin/install.ts`). Never suggest `curl ... | bash` from
+    unofficial sources.
 - **Security:** no live tokens, credentials, or internal URLs in
   examples. Install instructions must route through npm/pnpm or a
   reviewed script — no shell one-liners from untrusted hosts.

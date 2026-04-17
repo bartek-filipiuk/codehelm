@@ -48,7 +48,10 @@ function fallbackStripHome(cwd: string): string | null {
  * Extracts the first path segment under $HOME. Returns null when the path
  * does not live under $HOME (or any homedir-shaped prefix).
  */
-export function prefixSegment(cwd: string | null | undefined, homeDir?: string | null): string | null {
+export function prefixSegment(
+  cwd: string | null | undefined,
+  homeDir?: string | null,
+): string | null {
   if (!cwd) return null;
   let relative: string | null = null;
   if (homeDir) {

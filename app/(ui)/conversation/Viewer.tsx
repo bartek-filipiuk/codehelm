@@ -358,9 +358,7 @@ export function Viewer() {
             events={visibleEvents}
             visibleStart={visibleRange.start}
             visibleEnd={visibleRange.end}
-            onJump={(idx) =>
-              virtuosoRef.current?.scrollToIndex({ index: idx, align: 'center' })
-            }
+            onJump={(idx) => virtuosoRef.current?.scrollToIndex({ index: idx, align: 'center' })}
           />
         )}
       </div>

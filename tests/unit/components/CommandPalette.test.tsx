@@ -72,9 +72,7 @@ beforeEach(() => {
       ) as Response;
     }
     if (url.endsWith('/api/projects/meta')) {
-      return Response.json(
-        { entries: { '-home-user-alpha': { alias: 'Alpha' } } },
-      ) as Response;
+      return Response.json({ entries: { '-home-user-alpha': { alias: 'Alpha' } } }) as Response;
     }
     return new Response('not found', { status: 404 });
   });
