@@ -128,7 +128,7 @@ next `[ ]`. Never reorder or delete tasks — only check them off.
 
 ### T09 — Session stats bar
 
-- [ ] **Goal:** above the viewer, an expandable row showing: duration
+- [x] **Goal:** above the viewer, an expandable row showing: duration
   (first → last event), total tokens (sum from assistant events if
   `usage` present), top 5 tools by call count.
 - **Touch:** new `app/(ui)/conversation/StatsBar.tsx`, computed from
