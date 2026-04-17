@@ -64,7 +64,10 @@ describe('loadWidths', () => {
   });
 
   it('odczytuje z localStorage pod kluczem claude-ui:layout', () => {
-    window.localStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify({ sidebar: 500, sessions: 300 }));
+    window.localStorage.setItem(
+      LAYOUT_STORAGE_KEY,
+      JSON.stringify({ sidebar: 500, sessions: 300 }),
+    );
     expect(loadWidths()).toEqual({ sidebar: 500, sessions: 300 });
   });
 
@@ -74,7 +77,10 @@ describe('loadWidths', () => {
   });
 
   it('odrzuca wartości nienumeryczne', () => {
-    window.localStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify({ sidebar: 'abc', sessions: null }));
+    window.localStorage.setItem(
+      LAYOUT_STORAGE_KEY,
+      JSON.stringify({ sidebar: 'abc', sessions: null }),
+    );
     expect(loadWidths()).toEqual({ sidebar: DEFAULT_SIDEBAR, sessions: DEFAULT_SESSIONS });
   });
 });
@@ -96,7 +102,10 @@ describe('<ResizableColumns />', () => {
   });
 
   it('hydratuje szerokości z localStorage', async () => {
-    window.localStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify({ sidebar: 420, sessions: 280 }));
+    window.localStorage.setItem(
+      LAYOUT_STORAGE_KEY,
+      JSON.stringify({ sidebar: 420, sessions: 280 }),
+    );
     renderLayout();
     // After the effect runs the grid template reflects stored widths.
     await act(async () => {});

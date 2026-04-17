@@ -46,8 +46,8 @@ describe('isPaletteHotkey', () => {
   });
 
   it('respects defaultPrevented', () => {
-    expect(
-      isPaletteHotkey(makeEvent({ key: 'k', ctrl: true, defaultPrevented: true })),
-    ).toBe(false);
+    expect(isPaletteHotkey(makeEvent({ key: 'k', ctrl: true, defaultPrevented: true }))).toBe(
+      false,
+    );
   });
 });

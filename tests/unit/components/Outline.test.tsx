@@ -98,9 +98,7 @@ describe('<Outline />', () => {
       />,
     );
     expect(screen.getByTestId('outline-marker-0').getAttribute('data-category')).toBe('user');
-    expect(screen.getByTestId('outline-marker-1').getAttribute('data-category')).toBe(
-      'assistant',
-    );
+    expect(screen.getByTestId('outline-marker-1').getAttribute('data-category')).toBe('assistant');
     expect(screen.getByTestId('outline-marker-2').getAttribute('data-category')).toBe('tools');
     expect(screen.getByTestId('outline-marker-3').getAttribute('data-category')).toBe('system');
   });

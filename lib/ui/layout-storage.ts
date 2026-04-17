@@ -1,15 +1,18 @@
 export const LAYOUT_STORAGE_KEY = 'claude-ui:layout';
 
 export type SortMode = 'activity' | 'name' | 'sessions';
+export type ProjectGrouping = 'flat' | 'prefix';
 
 export interface LayoutState {
   sidebar?: number;
   sessions?: number;
   sortMode?: SortMode;
   editorPreview?: boolean;
+  projectGrouping?: ProjectGrouping;
 }
 
 const VALID_SORTS: SortMode[] = ['activity', 'name', 'sessions'];
+const VALID_GROUPINGS: ProjectGrouping[] = ['flat', 'prefix'];
 
 function readRaw(): Record<string, unknown> {
   if (typeof window === 'undefined') return {};
@@ -37,6 +40,13 @@ export function loadLayout(): LayoutState {
   }
   const editorPreview = raw['editorPreview'];
   if (typeof editorPreview === 'boolean') out.editorPreview = editorPreview;
+  const projectGrouping = raw['projectGrouping'];
+  if (
+    typeof projectGrouping === 'string' &&
+    VALID_GROUPINGS.includes(projectGrouping as ProjectGrouping)
+  ) {
+    out.projectGrouping = projectGrouping as ProjectGrouping;
+  }
   return out;
 }
 
@@ -53,4 +63,8 @@ export function patchLayout(partial: LayoutState): void {
 
 export function isSortMode(value: unknown): value is SortMode {
   return typeof value === 'string' && VALID_SORTS.includes(value as SortMode);
+}
+
+export function isProjectGrouping(value: unknown): value is ProjectGrouping {
+  return typeof value === 'string' && VALID_GROUPINGS.includes(value as ProjectGrouping);
 }

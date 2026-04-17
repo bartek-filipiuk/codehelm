@@ -38,9 +38,7 @@ export function DiffView({ oldText, newText, filePath, label }: DiffViewProps) {
       data-testid="diff-view"
     >
       <div className="flex items-center gap-3 border-b border-neutral-800 bg-neutral-900/60 px-3 py-1.5 text-[10px]">
-        {label && (
-          <span className="uppercase tracking-wider text-neutral-400">{label}</span>
-        )}
+        {label && <span className="uppercase tracking-wider text-neutral-400">{label}</span>}
         {filePath && (
           <span className="truncate font-mono text-neutral-300" title={filePath}>
             {filePath}

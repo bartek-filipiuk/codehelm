@@ -1,7 +1,14 @@
 import { create } from 'zustand';
-import { isSortMode, loadLayout, patchLayout, type SortMode } from '@/lib/ui/layout-storage';
+import {
+  isProjectGrouping,
+  isSortMode,
+  loadLayout,
+  patchLayout,
+  type ProjectGrouping,
+  type SortMode,
+} from '@/lib/ui/layout-storage';
 
-export type { SortMode };
+export type { ProjectGrouping, SortMode };
 
 interface UiState {
   selectedProjectSlug: string | null;
@@ -13,6 +20,7 @@ interface UiState {
   /** One-shot: Viewer consumes this, scrolls to the event, and clears it. */
   pendingEventIndex: number | null;
   sortMode: SortMode;
+  projectGrouping: ProjectGrouping;
   setSelectedProject: (slug: string | null) => void;
   setSelectedSession: (id: string | null) => void;
   setSearch: (q: string) => void;
@@ -23,14 +31,22 @@ interface UiState {
   jumpToEvent: (index: number) => void;
   consumePendingEvent: () => void;
   setSortMode: (mode: SortMode) => void;
+  setProjectGrouping: (grouping: ProjectGrouping) => void;
 }
 
 const DEFAULT_SORT: SortMode = 'activity';
+const DEFAULT_GROUPING: ProjectGrouping = 'flat';
 
 function initialSortMode(): SortMode {
   if (typeof window === 'undefined') return DEFAULT_SORT;
   const stored = loadLayout().sortMode;
   return isSortMode(stored) ? stored : DEFAULT_SORT;
+}
+
+function initialProjectGrouping(): ProjectGrouping {
+  if (typeof window === 'undefined') return DEFAULT_GROUPING;
+  const stored = loadLayout().projectGrouping;
+  return isProjectGrouping(stored) ? stored : DEFAULT_GROUPING;
 }
 
 export const useUiStore = create<UiState>((set) => ({
@@ -42,6 +58,7 @@ export const useUiStore = create<UiState>((set) => ({
   editorOpen: false,
   pendingEventIndex: null,
   sortMode: initialSortMode(),
+  projectGrouping: initialProjectGrouping(),
   setSelectedProject: (slug) =>
     set(() => ({
       selectedProjectSlug: slug,
@@ -55,11 +72,14 @@ export const useUiStore = create<UiState>((set) => ({
   closeTerminal: () => set({ terminalOpen: false, terminalCwd: null }),
   openEditor: () => set({ editorOpen: true, terminalOpen: false }),
   closeEditor: () => set({ editorOpen: false }),
-  jumpToEvent: (index) =>
-    set({ editorOpen: false, terminalOpen: false, pendingEventIndex: index }),
+  jumpToEvent: (index) => set({ editorOpen: false, terminalOpen: false, pendingEventIndex: index }),
   consumePendingEvent: () => set({ pendingEventIndex: null }),
   setSortMode: (mode) => {
     patchLayout({ sortMode: mode });
     set({ sortMode: mode });
+  },
+  setProjectGrouping: (grouping) => {
+    patchLayout({ projectGrouping: grouping });
+    set({ projectGrouping: grouping });
   },
 }));

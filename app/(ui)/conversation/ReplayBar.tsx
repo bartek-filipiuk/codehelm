@@ -24,13 +24,7 @@ function isReplaySpeed(v: string): v is ReplaySpeed {
  * Playback controls for Replay mode. Shown above the virtualised list.
  * Scrubbing pauses the engine automatically — see useReplay.
  */
-export function ReplayBar({
-  state,
-  controls,
-}: {
-  state: ReplayState;
-  controls: ReplayControls;
-}) {
+export function ReplayBar({ state, controls }: { state: ReplayState; controls: ReplayControls }) {
   const atEnd = state.revealed >= state.total && state.total > 0;
   const percent = state.total === 0 ? 0 : Math.round((state.revealed / state.total) * 100);
 

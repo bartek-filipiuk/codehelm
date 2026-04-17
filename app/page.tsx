@@ -14,9 +14,7 @@ export default function Page() {
           <header className="flex items-center justify-between border-b border-neutral-800 px-4 py-3">
             <h1 className="text-sm font-semibold tracking-tight">claude-ui</h1>
             <div className="flex items-center gap-2">
-              <span className="text-[10px] uppercase tracking-wider text-neutral-500">
-                local
-              </span>
+              <span className="text-[10px] uppercase tracking-wider text-neutral-500">local</span>
               <SettingsDialog />
             </div>
           </header>

@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach } from 'vitest';
 import {
+  isProjectGrouping,
   loadLayout,
   patchLayout,
   LAYOUT_STORAGE_KEY,
@@ -26,10 +27,7 @@ describe('layout-storage editorPreview', () => {
   });
 
   it('ignoruje nielogiczną wartość', () => {
-    window.localStorage.setItem(
-      LAYOUT_STORAGE_KEY,
-      JSON.stringify({ editorPreview: 'yes' }),
-    );
+    window.localStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify({ editorPreview: 'yes' }));
     expect(loadLayout().editorPreview).toBeUndefined();
   });
 
@@ -38,5 +36,30 @@ describe('layout-storage editorPreview', () => {
     const loaded = loadLayout();
     expect(loaded.sidebar).toBe(250);
     expect(loaded.editorPreview).toBe(true);
+  });
+});
+
+describe('layout-storage projectGrouping', () => {
+  it('is undefined by default', () => {
+    expect(loadLayout().projectGrouping).toBeUndefined();
+  });
+
+  it('round-trips the value through patchLayout', () => {
+    patchLayout({ projectGrouping: 'prefix' });
+    expect(loadLayout().projectGrouping).toBe('prefix');
+    patchLayout({ projectGrouping: 'flat' });
+    expect(loadLayout().projectGrouping).toBe('flat');
+  });
+
+  it('ignores invalid stored values', () => {
+    window.localStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify({ projectGrouping: 'tree' }));
+    expect(loadLayout().projectGrouping).toBeUndefined();
+  });
+
+  it('isProjectGrouping narrows the type', () => {
+    expect(isProjectGrouping('flat')).toBe(true);
+    expect(isProjectGrouping('prefix')).toBe(true);
+    expect(isProjectGrouping('tree')).toBe(false);
+    expect(isProjectGrouping(42)).toBe(false);
   });
 });

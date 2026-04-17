@@ -116,11 +116,7 @@ function TimestampBadge({ iso }: { iso: string }) {
   const text = formatTimestamp(iso, mode);
   if (!text) return null;
   return (
-    <time
-      dateTime={iso}
-      className="mt-2 block font-mono text-[10px] text-neutral-500"
-      title={iso}
-    >
+    <time dateTime={iso} className="mt-2 block font-mono text-[10px] text-neutral-500" title={iso}>
       {text}
     </time>
   );
@@ -174,14 +170,7 @@ function Blocks({
           return <ToolUseBlock key={i} name={b.name} input={b.input} />;
         }
         const diff = b.toolUseId ? registry?.get(b.toolUseId) : undefined;
-        return (
-          <ToolResultBlock
-            key={i}
-            text={b.text}
-            isError={b.isError}
-            diff={diff ?? null}
-          />
-        );
+        return <ToolResultBlock key={i} text={b.text} isError={b.isError} diff={diff ?? null} />;
       })}
     </div>
   );
@@ -225,9 +214,7 @@ function ToolResultBlock({
   const oneLine = safe.replace(/\s+/g, ' ').slice(0, 180);
   const tone = isError ? 'border-red-900/60 bg-red-950/20' : 'border-sky-900/60 bg-sky-950/10';
   const showDiff = diff !== null && !isError;
-  const summary = showDiff
-    ? `${diff.name}${diff.filePath ? ` · ${diff.filePath}` : ''}`
-    : oneLine;
+  const summary = showDiff ? `${diff.name}${diff.filePath ? ` · ${diff.filePath}` : ''}` : oneLine;
   const headerLabel = showDiff
     ? isError
       ? 'tool_result · diff · error'

@@ -51,18 +51,18 @@ one-shot token you never see.
 
 ## At a glance
 
-| Area               | What you get                                                  |
-| ------------------ | ------------------------------------------------------------- |
-| Projects sidebar   | Auto-discovered from `~/.claude/projects/`, aliasable, search |
-| Session list       | Preview, size, message count, relative mtime                  |
-| Viewer             | Streaming JSONL, virtualised, 9 event types, search + filters |
-| Terminal           | Up to 16 concurrent PTYs, backpressure, SIGHUP teardown       |
-| CLAUDE.md editor   | CodeMirror 6, atomic write, `If-Unmodified-Since` conflict    |
-| Live updates       | chokidar → WebSocket → TanStack Query invalidation            |
-| Auth               | Ephemeral port + 32B token + HttpOnly cookie + CSRF           |
-| CSP                | Per-request nonce, `strict-dynamic`, no `unsafe-inline`       |
-| Path traversal     | `fs.realpath` + prefix equality (fuzz-tested, 100 payloads)   |
-| Audit log          | Whitelisted fields only, 0600 file, 0700 dir                  |
+| Area             | What you get                                                  |
+| ---------------- | ------------------------------------------------------------- |
+| Projects sidebar | Auto-discovered from `~/.claude/projects/`, aliasable, search |
+| Session list     | Preview, size, message count, relative mtime                  |
+| Viewer           | Streaming JSONL, virtualised, 9 event types, search + filters |
+| Terminal         | Up to 16 concurrent PTYs, backpressure, SIGHUP teardown       |
+| CLAUDE.md editor | CodeMirror 6, atomic write, `If-Unmodified-Since` conflict    |
+| Live updates     | chokidar → WebSocket → TanStack Query invalidation            |
+| Auth             | Ephemeral port + 32B token + HttpOnly cookie + CSRF           |
+| CSP              | Per-request nonce, `strict-dynamic`, no `unsafe-inline`       |
+| Path traversal   | `fs.realpath` + prefix equality (fuzz-tested, 100 payloads)   |
+| Audit log        | Whitelisted fields only, 0600 file, 0700 dir                  |
 
 ---
 
@@ -307,16 +307,16 @@ What the suite actually proves:
 Development happened in eight security-gated phases. Each tag is a
 release marker with a passing gate suite.
 
-| Tag             | Scope                                           |
-| --------------- | ----------------------------------------------- |
-| phase-0-done    | Foundation: security primitives + launcher + CI |
-| phase-1-done    | Backend: JSONL parser + four REST endpoints     |
-| phase-2-done    | Sidebar + session explorer                      |
-| phase-3-done    | Conversation viewer + Shiki + sanitization      |
-| phase-4-done    | WebSocket + node-pty + single terminal          |
-| phase-5-done    | Multi-tab + `claude --resume` spawn             |
-| phase-6-done    | File watcher + live updates                     |
-| phase-7-done    | CodeMirror 6 + atomic write                     |
+| Tag          | Scope                                           |
+| ------------ | ----------------------------------------------- |
+| phase-0-done | Foundation: security primitives + launcher + CI |
+| phase-1-done | Backend: JSONL parser + four REST endpoints     |
+| phase-2-done | Sidebar + session explorer                      |
+| phase-3-done | Conversation viewer + Shiki + sanitization      |
+| phase-4-done | WebSocket + node-pty + single terminal          |
+| phase-5-done | Multi-tab + `claude --resume` spawn             |
+| phase-6-done | File watcher + live updates                     |
+| phase-7-done | CodeMirror 6 + atomic write                     |
 
 ---
 

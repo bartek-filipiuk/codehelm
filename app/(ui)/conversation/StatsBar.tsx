@@ -37,10 +37,7 @@ export function StatsBar({ events }: StatsBarProps) {
   ].filter((p): p is string => Boolean(p));
 
   return (
-    <div
-      className="border-b border-neutral-800 bg-neutral-950 text-[11px]"
-      data-testid="stats-bar"
-    >
+    <div className="border-b border-neutral-800 bg-neutral-950 text-[11px]" data-testid="stats-bar">
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}

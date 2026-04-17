@@ -214,8 +214,8 @@ export function SettingsDialog() {
           <fieldset className="flex flex-col gap-2 border-t border-neutral-800 pt-4">
             <legend className="text-neutral-300">Domyślnie ukryte kategorie</legend>
             <p className="text-[11px] text-neutral-500">
-              Wybrane kategorie startują ukryte przy otwarciu sesji. Chipsy w
-              widoku sesji nadal można przełączać lokalnie.
+              Wybrane kategorie startują ukryte przy otwarciu sesji. Chipsy w widoku sesji nadal
+              można przełączać lokalnie.
             </p>
             <div className="flex flex-wrap gap-2">
               {EVENT_CATEGORIES.map((c) => {
