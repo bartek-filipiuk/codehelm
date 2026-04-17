@@ -6,6 +6,7 @@ export interface LayoutState {
   sidebar?: number;
   sessions?: number;
   sortMode?: SortMode;
+  editorPreview?: boolean;
 }
 
 const VALID_SORTS: SortMode[] = ['activity', 'name', 'sessions'];
@@ -34,6 +35,8 @@ export function loadLayout(): LayoutState {
   if (typeof sortMode === 'string' && VALID_SORTS.includes(sortMode as SortMode)) {
     out.sortMode = sortMode as SortMode;
   }
+  const editorPreview = raw['editorPreview'];
+  if (typeof editorPreview === 'boolean') out.editorPreview = editorPreview;
   return out;
 }
 

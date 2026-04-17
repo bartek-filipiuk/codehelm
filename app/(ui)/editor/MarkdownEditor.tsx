@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useUiStore } from '@/stores/ui-slice';
 import { useClaudeMd, useSaveClaudeMd } from '@/hooks/use-claude-md';
+import { Markdown } from '@/components/conversation/Markdown';
+import { loadLayout, patchLayout } from '@/lib/ui/layout-storage';
 
 type EditorTarget = 'project' | 'global';
 
@@ -29,6 +31,20 @@ export function MarkdownEditor() {
   const [lastMtime, setLastMtime] = useState<string | null>(null);
   const [conflict, setConflict] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [preview, setPreview] = useState<boolean>(false);
+  const [previewText, setPreviewText] = useState<string>('');
+
+  useEffect(() => {
+    setPreview(loadLayout().editorPreview ?? false);
+  }, []);
+
+  const togglePreview = () => {
+    setPreview((prev) => {
+      const next = !prev;
+      patchLayout({ editorPreview: next });
+      return next;
+    });
+  };
 
   useEffect(() => {
     if (!hostRef.current) return;
@@ -50,7 +66,10 @@ export function MarkdownEditor() {
       if (cancelled || !hostRef.current) return;
 
       const updateListener = EditorView.updateListener.of((u) => {
-        if (u.docChanged) setDirty(true);
+        if (u.docChanged) {
+          setDirty(true);
+          setPreviewText(u.state.doc.toString());
+        }
       });
 
       const state = EditorState.create({
@@ -86,6 +105,7 @@ export function MarkdownEditor() {
   useEffect(() => {
     if (!mounted || !query.data || !setDocRef.current) return;
     setDocRef.current(query.data.content);
+    setPreviewText(query.data.content);
     setLastMtime(query.data.mtime);
     setDirty(false);
     setConflict(false);
@@ -156,6 +176,15 @@ export function MarkdownEditor() {
           </span>
           {dirty && <span className="text-[10px] text-amber-400">● unsaved</span>}
           {!dirty && lastMtime && <span className="text-[10px] text-neutral-500">Saved</span>}
+          <Button
+            size="sm"
+            variant={preview ? 'secondary' : 'ghost'}
+            onClick={togglePreview}
+            aria-pressed={preview}
+            title="Podgląd markdown"
+          >
+            Preview
+          </Button>
           <Button size="sm" onClick={doSave} disabled={!dirty || save.isPending}>
             {save.isPending ? 'Saving…' : 'Save (Ctrl+S)'}
           </Button>
@@ -175,18 +204,28 @@ export function MarkdownEditor() {
           Błąd zapisu: {error}
         </div>
       )}
-      <div className="relative min-h-0 flex-1">
-        {/* Host is always in the DOM so CodeMirror's mount-time effect has
-            a real element to attach to. Skeleton overlays while loading. */}
-        <div
-          ref={hostRef}
-          className="h-full min-h-0 [&_.cm-editor]:h-full [&_.cm-scroller]:font-mono"
-        />
-        {isLoading && (
-          <div className="absolute inset-0 flex flex-col gap-2 bg-neutral-950 p-4">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <Skeleton key={i} className="h-4 w-full" />
-            ))}
+      <div className="flex min-h-0 flex-1">
+        <div className="relative min-h-0 flex-1">
+          {/* Host is always in the DOM so CodeMirror's mount-time effect has
+              a real element to attach to. Skeleton overlays while loading. */}
+          <div
+            ref={hostRef}
+            className="h-full min-h-0 [&_.cm-editor]:h-full [&_.cm-scroller]:font-mono"
+          />
+          {isLoading && (
+            <div className="absolute inset-0 flex flex-col gap-2 bg-neutral-950 p-4">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <Skeleton key={i} className="h-4 w-full" />
+              ))}
+            </div>
+          )}
+        </div>
+        {preview && (
+          <div
+            className="min-h-0 flex-1 overflow-auto border-l border-neutral-800 bg-neutral-950 p-4"
+            data-testid="markdown-preview"
+          >
+            <Markdown text={previewText} />
           </div>
         )}
       </div>
