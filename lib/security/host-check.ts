@@ -12,8 +12,8 @@ export function isHostAllowed(host: string | null | undefined, expectedPort: num
 
 export function isOriginAllowed(origin: string | null | undefined, expectedPort: number): boolean {
   if (!origin) return false;
-  // Browsery wysyłają Origin jako `scheme://host[:port]` bez trailing slasha.
-  // Wymagamy dokładnego dopasowania — żadnych path, query, fragment ani `/`.
+  // Browsers send Origin as `scheme://host[:port]` without a trailing slash.
+  // Require an exact match — no path, query, fragment, or trailing `/`.
   const accept = [`http://127.0.0.1:${expectedPort}`, `http://localhost:${expectedPort}`];
   return accept.includes(origin);
 }

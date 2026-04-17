@@ -49,7 +49,7 @@ export function useWatch(): void {
         if (hadDrop) {
           hadDrop = false;
           dismissToast(WS_TOAST_ID);
-          toastSuccess('Połączenie odzyskane', { id: WS_TOAST_ID });
+          toastSuccess('Connection restored', { id: WS_TOAST_ID });
         }
         everOpened = true;
       };
@@ -80,7 +80,7 @@ export function useWatch(): void {
         ws = null;
         if (everOpened && !cancelled && !hadDrop) {
           hadDrop = true;
-          toastInfo('Utracono połączenie — ponowne łączenie…', {
+          toastInfo('Connection lost — reconnecting…', {
             id: WS_TOAST_ID,
             duration: 10_000,
           });

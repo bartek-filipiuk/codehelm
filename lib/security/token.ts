@@ -9,7 +9,7 @@ export function safeCompare(a: string, b: string): boolean {
   const bufA = Buffer.from(a, 'utf8');
   const bufB = Buffer.from(b, 'utf8');
   if (bufA.length !== bufB.length) {
-    // Porównanie z samym sobą zachowuje stały czas dla tej ścieżki.
+    // Comparing a buffer with itself keeps this branch constant-time.
     timingSafeEqual(bufA, bufA);
     return false;
   }
