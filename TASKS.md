@@ -174,7 +174,7 @@ next `[ ]`. Never reorder or delete tasks — only check them off.
 
 ### T13 — Conversation graph (effectful)
 
-- [ ] **Goal:** new viewer mode "Graph". Visualize a session as a DAG:
+- [x] **Goal:** new viewer mode "Graph". Visualize a session as a DAG:
   user messages are nodes on the main axis, assistant messages branch
   off, tool_use calls hang as leaves under their assistant node.
 - **Touch:** new `app/(ui)/conversation/Graph.tsx` using `reactflow`
