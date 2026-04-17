@@ -51,12 +51,12 @@ export function ProjectHeader() {
       {
         onSuccess: () => {
           setEditing(false);
-          toastSuccess(value === '' ? 'Alias usunięty' : 'Alias zaktualizowany', {
+          toastSuccess(value === '' ? 'Alias removed' : 'Alias updated', {
             id: 'project-alias',
           });
         },
         onError: (err) => {
-          toastError('Nie udało się zapisać aliasu', {
+          toastError('Failed to save alias', {
             id: 'project-alias',
             description: err.message,
           });
@@ -73,7 +73,7 @@ export function ProjectHeader() {
             <Input
               autoFocus
               value={draft}
-              placeholder={path ?? 'Nazwa projektu'}
+              placeholder={path ?? 'Project name'}
               onChange={(e) => setDraft(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
@@ -85,7 +85,7 @@ export function ProjectHeader() {
                 }
               }}
               className="h-7 text-xs"
-              aria-label="Alias projektu"
+              aria-label="Project alias"
             />
             <Button size="sm" variant="ghost" onClick={commit} disabled={setAlias.isPending}>
               ✓
@@ -95,7 +95,7 @@ export function ProjectHeader() {
             </Button>
           </div>
           <p className="text-[10px] text-neutral-500">
-            Enter = zapisz · Esc = anuluj · puste = usuń alias
+            Enter = save · Esc = cancel · empty = remove alias
           </p>
         </div>
       ) : (
@@ -121,7 +121,7 @@ export function ProjectHeader() {
               setDraft(alias ?? '');
               setEditing(true);
             }}
-            title="Zmień nazwę projektu (alias)"
+            title="Rename project (alias)"
           >
             ✎ rename
           </Button>

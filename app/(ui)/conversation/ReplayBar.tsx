@@ -39,25 +39,25 @@ export function ReplayBar({ state, controls }: { state: ReplayState; controls: R
       </span>
 
       {atEnd ? (
-        <Button size="sm" variant="outline" onClick={controls.reset} title="Odtwórz od początku">
-          ↻ od nowa
+        <Button size="sm" variant="outline" onClick={controls.reset} title="Replay from start">
+          ↻ restart
         </Button>
       ) : (
         <Button
           size="sm"
           variant={state.playing ? 'secondary' : 'default'}
           onClick={controls.toggle}
-          aria-label={state.playing ? 'Pauza' : 'Odtwarzaj'}
-          title={state.playing ? 'Pauza (Space)' : 'Odtwarzaj (Space)'}
+          aria-label={state.playing ? 'Pause' : 'Play'}
+          title={state.playing ? 'Pause (Space)' : 'Play (Space)'}
         >
           {state.playing ? '⏸' : '▶'}
         </Button>
       )}
 
       <label className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider text-neutral-400">
-        <span>Prędkość</span>
+        <span>Speed</span>
         <Select
-          aria-label="Prędkość odtwarzania"
+          aria-label="Playback speed"
           value={state.speed}
           onChange={(e) => {
             const v = e.target.value;
@@ -78,7 +78,7 @@ export function ReplayBar({ state, controls }: { state: ReplayState; controls: R
         max={Math.max(1, state.total)}
         value={state.revealed}
         onChange={(e) => controls.setRevealed(Number(e.target.value))}
-        aria-label="Postęp odtwarzania"
+        aria-label="Playback progress"
         className="h-1 min-w-0 flex-1 cursor-pointer accent-purple-400"
       />
 
@@ -86,8 +86,8 @@ export function ReplayBar({ state, controls }: { state: ReplayState; controls: R
         {state.revealed}/{state.total} · {percent}%
       </span>
 
-      <Button size="sm" variant="ghost" onClick={controls.exit} title="Wyjdź z trybu Replay">
-        Wyjdź
+      <Button size="sm" variant="ghost" onClick={controls.exit} title="Exit Replay mode">
+        Exit
       </Button>
     </div>
   );

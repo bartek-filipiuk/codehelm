@@ -18,7 +18,7 @@ export function TabBar({ onNewTab }: Props) {
   const closeWithToast = (id: string) => {
     const tab = useTerminalStore.getState().tabs.find((t) => t.id === id);
     closeTab(id);
-    toastInfo('Zakładka zamknięta', {
+    toastInfo('Tab closed', {
       id: `tab-closed-${id}`,
       ...(tab?.title ? { description: tab.title } : {}),
     });
@@ -55,7 +55,7 @@ export function TabBar({ onNewTab }: Props) {
             </button>
             <button
               type="button"
-              aria-label="Zamknij zakładkę"
+              aria-label="Close tab"
               onClick={(e) => {
                 e.stopPropagation();
                 closeWithToast(t.id);
@@ -73,7 +73,7 @@ export function TabBar({ onNewTab }: Props) {
           variant="outline"
           disabled={tabs.length >= TERMINAL_TAB_CAP}
           onClick={onNewTab}
-          title={tabs.length >= TERMINAL_TAB_CAP ? 'Limit 16 zakładek' : 'Nowa zakładka'}
+          title={tabs.length >= TERMINAL_TAB_CAP ? '16-tab limit reached' : 'New tab'}
         >
           +
         </Button>

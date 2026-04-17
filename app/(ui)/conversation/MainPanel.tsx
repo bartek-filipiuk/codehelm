@@ -42,7 +42,7 @@ export function MainPanel() {
       : 'viewer';
 
   const headerTitle = {
-    viewer: 'Historia',
+    viewer: 'History',
     terminal: `Terminal · ${tabs.length}/16`,
     editor: 'CLAUDE.md',
   }[mode];
@@ -66,20 +66,20 @@ export function MainPanel() {
             onClick={newShellTab}
             title={
               activeProject?.resolvedCwd
-                ? `Nowy shell w ${activeProject.resolvedCwd}`
-                : 'Wybierz projekt aby otworzyć terminal'
+                ? `New shell in ${activeProject.resolvedCwd}`
+                : 'Pick a project to open a terminal'
             }
           >
             + shell
           </Button>
           {mode === 'terminal' ? (
             <Button size="sm" variant="ghost" onClick={closeTerminal}>
-              Pokaż historię
+              Show history
             </Button>
           ) : mode === 'editor' ? null : (
             tabs.length > 0 && (
               <Button size="sm" variant="ghost" onClick={() => openTerminal(tabs[0]?.cwd ?? '/')}>
-                Pokaż terminal ({tabs.length})
+                Show terminal ({tabs.length})
               </Button>
             )
           )}

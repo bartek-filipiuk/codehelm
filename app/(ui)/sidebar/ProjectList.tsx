@@ -115,18 +115,18 @@ export function ProjectList() {
     <ScrollArea className="h-full">
       <div className="flex flex-col gap-1 px-3 pb-1 pt-2">
         <div className="flex items-center justify-between">
-          <span className="text-[10px] uppercase tracking-wider text-neutral-500">Sortuj</span>
+          <span className="text-[10px] uppercase tracking-wider text-neutral-500">Sort</span>
           <Select
-            aria-label="Sortowanie projektów"
+            aria-label="Project sort order"
             value={sortMode}
             onChange={(e) => {
               const next = e.target.value;
               if (isSortMode(next)) setSortMode(next);
             }}
           >
-            <option value="activity">Ostatnia aktywność</option>
-            <option value="name">Nazwa</option>
-            <option value="sessions">Liczba sesji</option>
+            <option value="activity">Last activity</option>
+            <option value="name">Name</option>
+            <option value="sessions">Session count</option>
           </Select>
         </div>
         <div className="flex items-center justify-between">
@@ -150,7 +150,7 @@ export function ProjectList() {
         <ul className="flex flex-col gap-0.5 p-2" role="list">
           {visible.map(renderItem)}
           {visible.length === 0 && (
-            <li className="px-3 py-6 text-center text-xs text-neutral-500">Brak dopasowań.</li>
+            <li className="px-3 py-6 text-center text-xs text-neutral-500">No matches.</li>
           )}
         </ul>
       )}
@@ -178,7 +178,7 @@ function GroupedProjects({
   if (groups.length === 0) {
     return (
       <ul className="flex flex-col gap-0.5 p-2" role="list">
-        <li className="px-3 py-6 text-center text-xs text-neutral-500">Brak dopasowań.</li>
+        <li className="px-3 py-6 text-center text-xs text-neutral-500">No matches.</li>
       </ul>
     );
   }
@@ -347,9 +347,9 @@ function LoadingState() {
 function ErrorState({ onRetry }: { onRetry: () => void }) {
   return (
     <div className="flex flex-col items-start gap-2 p-4 text-sm text-red-400">
-      <p>Nie udało się załadować listy projektów.</p>
+      <p>Failed to load the project list.</p>
       <Button size="sm" variant="outline" onClick={onRetry}>
-        Ponów
+        Retry
       </Button>
     </div>
   );
@@ -358,11 +358,11 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
 function EmptyState() {
   return (
     <div className="flex flex-col gap-2 px-4 py-8 text-sm text-neutral-400">
-      <p className="font-medium text-neutral-200">Brak projektów.</p>
+      <p className="font-medium text-neutral-200">No projects yet.</p>
       <p className="text-xs text-neutral-500">
-        Aby zaczął się pojawiać tu lista, uruchom Claude Code w jakimś projekcie przynajmniej raz.
-        Katalog <code className="rounded bg-neutral-800 px-1">~/.claude/projects/</code> zostanie
-        utworzony po pierwszej sesji.
+        Run Claude Code inside a project at least once to populate this list. The{' '}
+        <code className="rounded bg-neutral-800 px-1">~/.claude/projects/</code> directory is
+        created on the first session.
       </p>
     </div>
   );

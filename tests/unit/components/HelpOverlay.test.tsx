@@ -36,7 +36,7 @@ describe('<HelpOverlay />', () => {
       dispatchQuestionKey();
     });
     expect(screen.getByRole('dialog')).toBeDefined();
-    expect(screen.getByText('Skróty klawiaturowe')).toBeDefined();
+    expect(screen.getByText('Keyboard shortcuts')).toBeDefined();
     act(() => {
       dispatchQuestionKey();
     });

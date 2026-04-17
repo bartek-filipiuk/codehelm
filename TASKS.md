@@ -428,7 +428,7 @@ build`, `--no-symlink`.
 
 ### T27 — Rip Polish UI strings → English
 
-- [ ] **Goal:** replace all ~140 Polish UI strings in JSX with English
+- [x] **Goal:** replace all ~140 Polish UI strings in JSX with English
       equivalents. No i18n library introduced. Regression-guard test
       prevents Polish diacritics from re-entering the codebase.
 - **Touch (15 UI files):** `app/(ui)/sidebar/{ProjectList,Search}.tsx`;

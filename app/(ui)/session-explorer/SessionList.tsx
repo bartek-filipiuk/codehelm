@@ -20,7 +20,7 @@ export function SessionList() {
   if (!slug) {
     return (
       <div className="flex h-full items-center justify-center p-8 text-sm text-neutral-500">
-        Wybierz projekt z listy po lewej.
+        Pick a project from the list on the left.
       </div>
     );
   }
@@ -38,9 +38,9 @@ export function SessionList() {
   if (isError) {
     return (
       <div className="flex flex-col items-start gap-2 p-4 text-sm text-red-400">
-        <p>Nie udało się załadować sesji.</p>
+        <p>Failed to load sessions.</p>
         <Button size="sm" variant="outline" onClick={() => refetch()}>
-          Ponów
+          Retry
         </Button>
       </div>
     );
@@ -49,14 +49,14 @@ export function SessionList() {
   if (!data || data.length === 0) {
     return (
       <div className="flex flex-col items-start gap-3 p-6 text-sm text-neutral-500">
-        <p>Brak sesji w tym projekcie (jeszcze).</p>
+        <p>No sessions in this project yet.</p>
         <Button
           size="sm"
           variant="outline"
           onClick={() => openSession.mutate({ slug })}
           disabled={openSession.isPending}
         >
-          + Nowa sesja claude
+          + New claude session
         </Button>
       </div>
     );
@@ -66,7 +66,7 @@ export function SessionList() {
     <ScrollArea className="h-full">
       <div className="flex items-center justify-between px-4 pt-3 pb-1">
         <span className="text-[11px] uppercase tracking-wider text-neutral-500">
-          {data.length} sesji
+          {data.length} sessions
         </span>
         <Button
           size="sm"
@@ -125,13 +125,13 @@ function SessionItem({
             <p className="line-clamp-2 text-sm text-neutral-200">{session.firstUserPreview}</p>
           )}
           <div className="flex items-center gap-3 text-[11px] text-neutral-500">
-            <span>{session.messageCount ?? '—'} wiadomości</span>
+            <span>{session.messageCount ?? '—'} messages</span>
             <span>•</span>
             <span>{formatBytes(session.size)}</span>
             {session.costUsd !== null && (
               <>
                 <span>•</span>
-                <span title="Szacowany koszt" className="tabular-nums text-neutral-400">
+                <span title="Estimated cost" className="tabular-nums text-neutral-400">
                   {formatUsd(session.costUsd)}
                 </span>
               </>
@@ -149,7 +149,7 @@ function SessionItem({
             disabled={openPending}
             className="text-xs"
           >
-            ▶ resume w terminalu
+            ▶ resume in terminal
           </Button>
         </div>
       </div>

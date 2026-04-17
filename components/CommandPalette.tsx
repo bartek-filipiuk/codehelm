@@ -126,7 +126,7 @@ export function CommandPalette() {
     if (!activeTabId) return;
     const tab = useTerminalStore.getState().tabs.find((t) => t.id === activeTabId);
     closeTab(activeTabId);
-    toastInfo('Zakładka zamknięta', {
+    toastInfo('Tab closed', {
       id: `tab-closed-${activeTabId}`,
       ...(tab?.title ? { description: tab.title } : {}),
     });
@@ -141,43 +141,43 @@ export function CommandPalette() {
         data-testid="command-palette"
       >
         <VisuallyHidden>
-          <DialogTitle>Paleta poleceń</DialogTitle>
+          <DialogTitle>Command palette</DialogTitle>
           <DialogDescription>
-            Szybki wybór projektu lub akcji. Użyj strzałek i Enter.
+            Quickly jump to a project or run an action. Use arrow keys and Enter.
           </DialogDescription>
         </VisuallyHidden>
-        <Command label="Paleta poleceń">
-          <CommandInput placeholder="Szukaj polecenia lub projektu…" />
+        <Command label="Command palette">
+          <CommandInput placeholder="Search commands or projects…" />
           <CommandList>
-            <CommandEmpty>Brak dopasowań.</CommandEmpty>
-            <CommandGroup heading="Akcje">
+            <CommandEmpty>No matches.</CommandEmpty>
+            <CommandGroup heading="Actions">
               <CommandItem
-                value="new shell bieżący projekt shell terminal"
+                value="new shell current project shell terminal"
                 onSelect={newShellHere}
                 disabled={!activeProject?.resolvedCwd}
               >
-                Nowy shell w bieżącym projekcie
+                New shell in current project
               </CommandItem>
               <CommandItem
-                value="open claude md bieżący projekt"
+                value="open claude md current project"
                 onSelect={openProjectClaudeMd}
                 disabled={!activeProject}
               >
-                Otwórz CLAUDE.md (bieżący projekt)
+                Open CLAUDE.md (current project)
               </CommandItem>
-              <CommandItem value="open claude md globalny global" onSelect={openGlobalClaudeMd}>
-                Otwórz CLAUDE.md (globalny)
+              <CommandItem value="open claude md global" onSelect={openGlobalClaudeMd}>
+                Open CLAUDE.md (global)
               </CommandItem>
               <CommandItem
-                value="zamknij kartę terminala close current tab"
+                value="close tab terminal current"
                 onSelect={closeCurrentTab}
                 disabled={!activeTabId}
               >
-                Zamknij bieżącą kartę terminala
+                Close current terminal tab
               </CommandItem>
             </CommandGroup>
             {recent.length > 0 && (
-              <CommandGroup heading="Ostatnie projekty">
+              <CommandGroup heading="Recent projects">
                 {recent.map((p) => (
                   <CommandItem
                     key={`recent-${p.slug}`}
@@ -190,7 +190,7 @@ export function CommandPalette() {
               </CommandGroup>
             )}
             {alphabetical.length > 0 && (
-              <CommandGroup heading="Wszystkie projekty">
+              <CommandGroup heading="All projects">
                 {alphabetical.map((p) => (
                   <CommandItem
                     key={`all-${p.slug}`}
