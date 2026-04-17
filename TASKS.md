@@ -277,7 +277,7 @@ next `[ ]`. Never reorder or delete tasks — only check them off.
 
 ### T20 — Parent tool_use popover
 
-- [ ] **Goal:** clicking anywhere inside a rendered `tool_result`
+- [x] **Goal:** clicking anywhere inside a rendered `tool_result`
       opens a small popover showing the linked `tool_use` (tool name +
       args, pretty-printed JSON, wrapped). Closes on outside click / Esc.
 - **Touch:** `components/conversation/messages.tsx` — wrap the existing
@@ -307,7 +307,7 @@ next `[ ]`. Never reorder or delete tasks — only check them off.
 
 ### T22 — Recent CLAUDE.md files dropdown
 
-- [ ] **Goal:** dropdown in editor header listing last 10 opened
+- [x] **Goal:** dropdown in editor header listing last 10 opened
       CLAUDE.md paths (mixed global + per-project). Click opens that file
       in the editor.
 - **Touch:** new `lib/ui/recent-files.ts` (localStorage-backed, key

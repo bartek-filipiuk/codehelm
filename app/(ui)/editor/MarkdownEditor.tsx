@@ -3,11 +3,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useUiStore } from '@/stores/ui-slice';
 import { useClaudeMd, useSaveClaudeMd } from '@/hooks/use-claude-md';
 import { Markdown } from '@/components/conversation/Markdown';
 import { loadLayout, patchLayout } from '@/lib/ui/layout-storage';
 import { toastError, toastSuccess, toastWarning } from '@/lib/ui/toast';
+import { loadRecentFiles, pushRecentFile, type RecentFileEntry } from '@/lib/ui/recent-files';
 
 type EditorTarget = 'project' | 'global';
 
@@ -18,10 +20,45 @@ type EditorTarget = 'project' | 'global';
  */
 export function MarkdownEditor() {
   const projectSlug = useUiStore((s) => s.selectedProjectSlug);
+  const setSelectedProject = useUiStore((s) => s.setSelectedProject);
   const [target, setTarget] = useState<EditorTarget>(projectSlug ? 'project' : 'global');
   const effectiveSlug = target === 'project' ? projectSlug : null;
   const query = useClaudeMd(effectiveSlug);
   const save = useSaveClaudeMd(effectiveSlug);
+  const [recent, setRecent] = useState<RecentFileEntry[]>([]);
+  const lastPushedKeyRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    setRecent(loadRecentFiles());
+  }, []);
+
+  // Record the current target in the recent-files LRU whenever a load
+  // succeeds. Keyed by kind+slug so switching back-and-forth still dedups.
+  useEffect(() => {
+    if (!query.data) return;
+    const key = target === 'global' ? 'global' : `project:${projectSlug ?? ''}`;
+    if (lastPushedKeyRef.current === key) return;
+    const entry =
+      target === 'global'
+        ? ({ kind: 'global', label: 'Global CLAUDE.md' } as const)
+        : projectSlug
+          ? ({ kind: 'project', slug: projectSlug, label: projectSlug } as const)
+          : null;
+    if (!entry) return;
+    setRecent(pushRecentFile(entry));
+    lastPushedKeyRef.current = key;
+  }, [query.data, target, projectSlug]);
+
+  const openRecent = (entry: RecentFileEntry) => {
+    if (entry.kind === 'global') {
+      setTarget('global');
+      return;
+    }
+    if (entry.slug && entry.slug !== projectSlug) {
+      setSelectedProject(entry.slug);
+    }
+    setTarget('project');
+  };
 
   const hostRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<unknown>(null);
@@ -178,6 +215,43 @@ export function MarkdownEditor() {
           >
             Global
           </Button>
+          {recent.length > 0 && (
+            <Popover>
+              <PopoverTrigger
+                className="ml-1 rounded px-2 py-0.5 text-[11px] text-neutral-400 hover:bg-neutral-800 hover:text-neutral-100"
+                title="Recently opened CLAUDE.md files"
+              >
+                Recent ▾
+              </PopoverTrigger>
+              <PopoverContent className="w-64 p-1">
+                <ul className="flex flex-col">
+                  {recent.map((e, i) => {
+                    const isCurrent =
+                      e.kind === target && (e.kind === 'global' || e.slug === projectSlug);
+                    return (
+                      <li key={`${e.kind}:${e.slug ?? 'global'}:${i}`}>
+                        <button
+                          type="button"
+                          onClick={() => openRecent(e)}
+                          disabled={isCurrent}
+                          className={`flex w-full items-center gap-2 rounded px-2 py-1 text-left text-xs ${
+                            isCurrent
+                              ? 'cursor-default bg-neutral-800 text-neutral-400'
+                              : 'text-neutral-200 hover:bg-neutral-800'
+                          }`}
+                        >
+                          <span className="font-mono text-[9px] uppercase tracking-wider text-neutral-500">
+                            {e.kind === 'global' ? 'glb' : 'prj'}
+                          </span>
+                          <span className="truncate">{e.label}</span>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </PopoverContent>
+            </Popover>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <span
