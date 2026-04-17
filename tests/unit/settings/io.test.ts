@@ -72,9 +72,10 @@ describe('readSettings', () => {
       }),
       'utf8',
     );
-    const { readSettings } = await loadModule();
+    const { readSettings, DEFAULT_SETTINGS } = await loadModule();
     const out = await readSettings();
     expect(out).toEqual({
+      ...DEFAULT_SETTINGS,
       viewerFontSize: 'lg',
       terminalFontSize: 16,
       viewerDensity: 'compact',

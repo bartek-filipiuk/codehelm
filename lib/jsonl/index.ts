@@ -5,6 +5,12 @@ import { PATHS } from '@/lib/server/config';
 import { parseJsonlStream } from './parser';
 import { createReadStream } from 'node:fs';
 import { isValidSlug, decodeSlugToDisplayPath } from './slug';
+import {
+  DEFAULT_MODEL_PRICING,
+  costForUsage,
+  extractUsage,
+  type ModelPricing,
+} from './usage';
 
 const SESSION_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.jsonl$/i;
 
@@ -24,6 +30,8 @@ export interface SessionSummary {
   mtime: string;
   messageCount: number | null;
   firstUserPreview: string | null;
+  costUsd: number | null;
+  totalTokens: number | null;
 }
 
 export async function listProjects(): Promise<ProjectSummary[]> {
@@ -104,6 +112,8 @@ async function collectSessionFiles(dir: string): Promise<SessionSummary[]> {
       mtime: st.mtime.toISOString(),
       messageCount: null,
       firstUserPreview: null,
+      costUsd: null,
+      totalTokens: null,
     });
   }
   out.sort((a, b) => b.mtime.localeCompare(a.mtime));
@@ -187,9 +197,13 @@ async function sniffResolvedCwd(filePath: string | null): Promise<string | null>
 
 export async function sessionPreview(
   filePath: string,
-): Promise<Pick<SessionSummary, 'messageCount' | 'firstUserPreview'>> {
+  pricing: ModelPricing = DEFAULT_MODEL_PRICING,
+): Promise<Pick<SessionSummary, 'messageCount' | 'firstUserPreview' | 'costUsd' | 'totalTokens'>> {
   let messageCount = 0;
   let firstUserPreview: string | null = null;
+  let costUsd = 0;
+  let tokens = 0;
+  let sawUsage = false;
   const stream = createReadStream(filePath, { encoding: 'utf8' });
   for await (const ev of parseJsonlStream(stream, { logMalformed: false })) {
     messageCount++;
@@ -197,7 +211,22 @@ export async function sessionPreview(
       const content = ev.message.content;
       firstUserPreview = typeof content === 'string' ? content.slice(0, 160) : null;
     }
+    const usage = extractUsage(ev);
+    if (usage) {
+      sawUsage = true;
+      costUsd += costForUsage(usage, usage.model, pricing);
+      tokens +=
+        usage.inputTokens +
+        usage.outputTokens +
+        usage.cacheCreationInputTokens +
+        usage.cacheReadInputTokens;
+    }
     if (messageCount > 2000) break;
   }
-  return { messageCount, firstUserPreview };
+  return {
+    messageCount,
+    firstUserPreview,
+    costUsd: sawUsage ? costUsd : null,
+    totalTokens: sawUsage ? tokens : null,
+  };
 }

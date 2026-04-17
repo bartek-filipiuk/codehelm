@@ -7,6 +7,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { timeAgo, formatBytes } from '@/lib/ui/format';
+import { formatUsd } from '@/lib/jsonl/usage';
 import { cn } from '@/lib/utils';
 
 export function SessionList() {
@@ -127,6 +128,14 @@ function SessionItem({
             <span>{session.messageCount ?? '—'} wiadomości</span>
             <span>•</span>
             <span>{formatBytes(session.size)}</span>
+            {session.costUsd !== null && (
+              <>
+                <span>•</span>
+                <span title="Szacowany koszt" className="tabular-nums text-neutral-400">
+                  {formatUsd(session.costUsd)}
+                </span>
+              </>
+            )}
           </div>
         </button>
         <div className="flex gap-2">

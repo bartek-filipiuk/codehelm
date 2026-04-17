@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { applySettingsToDocument } from '@/components/SettingsApplier';
+import { DEFAULT_SETTINGS } from '@/lib/settings/io';
 
 describe('applySettingsToDocument', () => {
   it('writes CSS variables and theme attribute on <html>', () => {
@@ -7,6 +8,7 @@ describe('applySettingsToDocument', () => {
     applySettingsToDocument(
       { documentElement: root } as unknown as Document,
       {
+        ...DEFAULT_SETTINGS,
         viewerFontSize: 'lg',
         terminalFontSize: 16,
         viewerDensity: 'compact',
@@ -20,13 +22,6 @@ describe('applySettingsToDocument', () => {
   });
 
   it('handles null doc safely', () => {
-    expect(() =>
-      applySettingsToDocument(null, {
-        viewerFontSize: 'md',
-        terminalFontSize: 13,
-        viewerDensity: 'comfortable',
-        theme: 'dark',
-      }),
-    ).not.toThrow();
+    expect(() => applySettingsToDocument(null, { ...DEFAULT_SETTINGS })).not.toThrow();
   });
 });

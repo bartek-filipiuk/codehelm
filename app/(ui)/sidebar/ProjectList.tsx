@@ -8,12 +8,14 @@ import {
   useSetProjectMeta,
   type ProjectMetaMap,
 } from '@/hooks/use-project-meta';
+import { useSessions } from '@/hooks/use-sessions';
 import { useUiStore } from '@/stores/ui-slice';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select } from '@/components/ui/select';
 import { timeAgo } from '@/lib/ui/format';
+import { formatUsd } from '@/lib/jsonl/usage';
 import { isSortMode, type SortMode } from '@/lib/ui/layout-storage';
 import { cn } from '@/lib/utils';
 
@@ -31,6 +33,20 @@ export function ProjectList() {
     () => filterAndSortProjects(data ?? [], meta ?? {}, search, sortMode),
     [data, meta, search, sortMode],
   );
+
+  const { data: selectedSessions } = useSessions(selectedSlug);
+  const selectedCost = useMemo(() => {
+    if (!selectedSessions || selectedSessions.length === 0) return null;
+    let total = 0;
+    let seen = false;
+    for (const s of selectedSessions) {
+      if (typeof s.costUsd === 'number' && Number.isFinite(s.costUsd)) {
+        total += s.costUsd;
+        seen = true;
+      }
+    }
+    return seen ? total : null;
+  }, [selectedSessions]);
 
   if (isLoading) return <LoadingState />;
   if (isError) return <ErrorState onRetry={() => refetch()} />;
@@ -56,13 +72,15 @@ export function ProjectList() {
       <ul className="flex flex-col gap-0.5 p-2" role="list">
         {visible.map((p) => {
           const entry = meta?.[p.slug];
+          const isActive = p.slug === selectedSlug;
           return (
             <ProjectItem
               key={p.slug}
               project={p}
               alias={entry?.alias}
               favorite={entry?.favorite === true}
-              active={p.slug === selectedSlug}
+              active={isActive}
+              costUsd={isActive ? selectedCost : null}
               onSelect={() => setSelected(p.slug)}
               onToggleFavorite={() => {
                 setMeta.mutate({
@@ -128,6 +146,7 @@ function ProjectItem({
   alias,
   favorite,
   active,
+  costUsd,
   onSelect,
   onToggleFavorite,
 }: {
@@ -135,11 +154,14 @@ function ProjectItem({
   alias: string | undefined;
   favorite: boolean;
   active: boolean;
+  costUsd: number | null;
   onSelect: () => void;
   onToggleFavorite: () => void;
 }) {
   const path = project.resolvedCwd ?? project.displayPath;
   const primary = alias ?? path;
+  const tooltipBase = `${alias ? alias + '\n' : ''}${path}\nslug: ${project.slug}`;
+  const tooltip = costUsd !== null ? `${tooltipBase}\nszacowany koszt: ${formatUsd(costUsd)}` : tooltipBase;
   return (
     <li
       className={cn(
@@ -171,7 +193,7 @@ function ProjectItem({
       <button
         type="button"
         onClick={onSelect}
-        title={`${alias ? alias + '\n' : ''}${path}\nslug: ${project.slug}`}
+        title={tooltip}
         className="flex min-w-0 flex-1 items-center justify-between gap-2 py-2 pl-1 pr-2 text-left"
       >
         <span className="min-w-0 flex-1 truncate">
@@ -182,6 +204,7 @@ function ProjectItem({
           )}
         </span>
         <span className="ml-2 inline-flex shrink-0 items-center gap-2 text-[10px] text-neutral-400">
+          {costUsd !== null && <span className="tabular-nums">{formatUsd(costUsd)}</span>}
           <span>{project.sessionCount}</span>
           <span>{timeAgo(project.lastActivity)}</span>
         </span>

@@ -41,6 +41,7 @@ const AssistantEvent = CommonMeta.extend({
     content: z.array(z.unknown()),
     stop_reason: z.string().nullable().optional(),
     usage: UsageSchema.optional(),
+    model: z.string().optional(),
   }),
   requestId: z.string().optional(),
 });

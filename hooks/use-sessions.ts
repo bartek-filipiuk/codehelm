@@ -10,6 +10,8 @@ export interface SessionSummary {
   mtime: string;
   messageCount: number | null;
   firstUserPreview: string | null;
+  costUsd: number | null;
+  totalTokens: number | null;
 }
 
 export function useSessions(slug: string | null) {

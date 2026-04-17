@@ -3,6 +3,11 @@ import { dirname, join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { PATHS } from '@/lib/server/config';
+import {
+  DEFAULT_MODEL_PRICING,
+  MODEL_RATE_KEYS,
+  type ModelPricing,
+} from '@/lib/jsonl/usage';
 
 export const VIEWER_FONT_SIZES = ['xs', 'sm', 'md', 'lg'] as const;
 export const TERMINAL_FONT_SIZES = [12, 13, 14, 16] as const;
@@ -19,6 +24,7 @@ export interface Settings {
   terminalFontSize: TerminalFontSize;
   viewerDensity: ViewerDensity;
   theme: Theme;
+  modelPricing: ModelPricing;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -26,7 +32,24 @@ export const DEFAULT_SETTINGS: Settings = {
   terminalFontSize: 13,
   viewerDensity: 'comfortable',
   theme: 'dark',
+  modelPricing: DEFAULT_MODEL_PRICING,
 };
+
+const nonNegative = z.number().nonnegative().finite();
+
+const ModelRateSchema = z.object({
+  input: nonNegative,
+  output: nonNegative,
+  cacheWrite: nonNegative,
+  cacheRead: nonNegative,
+});
+
+const ModelPricingSchema = z.object(
+  Object.fromEntries(MODEL_RATE_KEYS.map((k) => [k, ModelRateSchema])) as Record<
+    (typeof MODEL_RATE_KEYS)[number],
+    typeof ModelRateSchema
+  >,
+);
 
 export const SettingsSchema = z.object({
   viewerFontSize: z.enum(VIEWER_FONT_SIZES),
@@ -38,6 +61,7 @@ export const SettingsSchema = z.object({
   ]),
   viewerDensity: z.enum(VIEWER_DENSITIES),
   theme: z.enum(THEMES),
+  modelPricing: ModelPricingSchema,
 });
 
 export const SettingsPatchSchema = SettingsSchema.partial();
