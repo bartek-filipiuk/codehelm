@@ -17,10 +17,12 @@ import {
   type EventCategory as Category,
 } from '@/lib/jsonl/outline';
 import { buildToolUseRegistry } from '@/lib/jsonl/tool-pairs';
+import { parseJumpQuery } from '@/lib/jsonl/jump';
 import { Outline } from './Outline';
 import { StatsBar } from './StatsBar';
 import { ReplayBar } from './ReplayBar';
 import { useReplay } from '@/hooks/use-replay';
+import { toastError } from '@/lib/ui/toast';
 
 const CATEGORY_LABEL: Record<Category, string> = {
   user: 'User',
@@ -37,6 +39,7 @@ export function Viewer() {
   const { events, loading, error, done, bytes } = useSessionStream(slug, sessionId);
   const [query, setQuery] = useState('');
   const [hitIndex, setHitIndex] = useState(0);
+  const [jumpQuery, setJumpQuery] = useState('');
   const [follow, setFollow] = useState(true);
   const [hidden, setHidden] = useState<Set<Category>>(new Set());
   const [onlyHits, setOnlyHits] = useState(false);
@@ -138,6 +141,18 @@ export function Viewer() {
     });
   };
 
+  const handleJump = () => {
+    const idx = parseJumpQuery(jumpQuery, events);
+    if (idx == null) {
+      toastError('Nie rozumiem. Użyj numeru (42) albo offsetu (5m, 1h30m).');
+      return;
+    }
+    const visibleIdx = visibleEvents.findIndex((v) => v.origIndex === idx);
+    const target = visibleIdx >= 0 ? visibleIdx : Math.min(idx, visibleEvents.length - 1);
+    if (target < 0) return;
+    virtuosoRef.current?.scrollToIndex({ index: target, align: 'center' });
+  };
+
   const goToHit = (nextIdx: number) => {
     if (hits.length === 0) return;
     const idx = ((nextIdx % hits.length) + hits.length) % hits.length;
@@ -205,6 +220,32 @@ export function Viewer() {
         >
           tylko ▾
         </Button>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleJump();
+          }}
+          className="flex items-center gap-1"
+        >
+          <Input
+            type="text"
+            value={jumpQuery}
+            onChange={(e) => setJumpQuery(e.target.value)}
+            placeholder="np. 42 · 5m · 1h30m"
+            className="h-8 w-36 text-xs"
+            aria-label="Skocz do zdarzenia"
+            title="Numer zdarzenia (42) lub offset od początku (5m, 1h30m)"
+          />
+          <Button
+            size="sm"
+            variant="ghost"
+            type="submit"
+            disabled={events.length === 0 || jumpQuery.trim() === ''}
+            title="Skocz"
+          >
+            →
+          </Button>
+        </form>
         <Button
           size="sm"
           variant={follow ? 'secondary' : 'outline'}

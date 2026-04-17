@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { usePty, type PtyStatus } from '@/hooks/use-pty';
 import { useSettings } from '@/hooks/use-settings';
+import { toastInfo } from '@/lib/ui/toast';
 
 export interface TerminalProps {
   cwd: string;
@@ -135,12 +136,39 @@ export function Terminal({ cwd, shell, args, initCommand }: TerminalProps) {
     }
   }, [fontSize]);
 
+  const handleClear = () => {
+    termRef.current?.clear();
+  };
+
+  const handleSave = () => {
+    const term = termRef.current;
+    if (!term) return;
+    const content = serializeTerminalBuffer(term);
+    const stamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `terminal-${stamp}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    toastInfo('Zapisano bufor terminala', { description: a.download });
+  };
+
   return (
     <div className="flex h-full min-h-0 flex-col bg-neutral-950">
       <div className="flex items-center justify-between border-b border-neutral-800 px-3 py-1.5 text-xs text-neutral-500">
         <span className="font-mono">{cwd}</span>
         <span className="flex items-center gap-2">
           <StatusBadge status={status} />
+          <Button size="sm" variant="ghost" onClick={handleClear} title="Wyczyść bufor">
+            Wyczyść
+          </Button>
+          <Button size="sm" variant="ghost" onClick={handleSave} title="Pobierz bufor jako .txt">
+            Zapisz
+          </Button>
           <Button
             size="sm"
             variant="ghost"
@@ -165,6 +193,18 @@ export function Terminal({ cwd, shell, args, initCommand }: TerminalProps) {
       <div ref={hostRef} className="min-h-0 flex-1" />
     </div>
   );
+}
+
+function serializeTerminalBuffer(term: import('@xterm/xterm').Terminal): string {
+  const buf = term.buffer.active;
+  const lines: string[] = [];
+  for (let i = 0; i < buf.length; i++) {
+    const line = buf.getLine(i);
+    if (line) lines.push(line.translateToString(true));
+  }
+  // Trim trailing empty lines.
+  while (lines.length > 0 && lines[lines.length - 1] === '') lines.pop();
+  return lines.join('\n') + '\n';
 }
 
 function StatusBadge({ status }: { status: PtyStatus }) {
