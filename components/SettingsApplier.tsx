@@ -7,7 +7,7 @@ import {
   type Theme,
   type ViewerDensity,
   type ViewerFontSize,
-} from '@/lib/settings/io';
+} from '@/lib/settings/types';
 
 const VIEWER_FONT_PX: Record<ViewerFontSize, string> = {
   xs: '12px',

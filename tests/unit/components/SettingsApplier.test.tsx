@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { applySettingsToDocument } from '@/components/SettingsApplier';
-import { DEFAULT_SETTINGS } from '@/lib/settings/io';
+import { DEFAULT_SETTINGS } from '@/lib/settings/types';
 
 describe('applySettingsToDocument', () => {
   it('writes CSS variables and theme attribute on <html>', () => {

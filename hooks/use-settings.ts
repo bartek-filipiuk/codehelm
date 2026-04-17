@@ -6,7 +6,7 @@ import {
   DEFAULT_SETTINGS,
   type Settings,
   type SettingsPatch,
-} from '@/lib/settings/io';
+} from '@/lib/settings/types';
 
 const SETTINGS_KEY = ['settings'] as const;
 

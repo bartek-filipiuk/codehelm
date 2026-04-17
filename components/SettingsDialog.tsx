@@ -11,7 +11,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { useSettings, useSetSettings } from '@/hooks/use-settings';
-import { DEFAULT_SETTINGS } from '@/lib/settings/io';
+import { DEFAULT_SETTINGS } from '@/lib/settings/types';
 import {
   TERMINAL_FONT_SIZES,
   THEMES,
@@ -22,7 +22,7 @@ import {
   type TerminalFontSize,
   type ViewerDensity,
   type ViewerFontSize,
-} from '@/lib/settings/io';
+} from '@/lib/settings/types';
 import {
   MODEL_RATE_KEYS,
   type ModelPricing,
