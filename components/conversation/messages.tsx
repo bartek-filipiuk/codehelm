@@ -2,15 +2,18 @@
 
 import { useState } from 'react';
 import type { JsonlEvent } from '@/lib/jsonl/types';
-import type { DiffToolUse } from '@/lib/jsonl/tool-pairs';
+import type { DiffToolUse, ParentToolUseRegistry } from '@/lib/jsonl/tool-pairs';
 import { Markdown } from './Markdown';
 import { CodeBlock } from './CodeBlock';
 import { DiffView } from './DiffView';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useSettings } from '@/hooks/use-settings';
 import { formatTimestamp } from '@/lib/jsonl/format-timestamp';
 import { DEFAULT_SETTINGS } from '@/lib/settings/types';
 
 export type ToolUseRegistry = ReadonlyMap<string, DiffToolUse>;
+
+const POPOVER_INPUT_MAX_BYTES = 10_000;
 
 const MAX_RENDER_BYTES = 10_000_000;
 
@@ -126,10 +129,12 @@ function Blocks({
   blocks,
   markdown,
   registry,
+  parentRegistry,
 }: {
   blocks: ContentBlock[];
   markdown: boolean;
   registry?: ToolUseRegistry | undefined;
+  parentRegistry?: ParentToolUseRegistry | undefined;
 }) {
   return (
     <div className="flex flex-col gap-3">
@@ -170,7 +175,16 @@ function Blocks({
           return <ToolUseBlock key={i} name={b.name} input={b.input} />;
         }
         const diff = b.toolUseId ? registry?.get(b.toolUseId) : undefined;
-        return <ToolResultBlock key={i} text={b.text} isError={b.isError} diff={diff ?? null} />;
+        const parent = b.toolUseId ? parentRegistry?.get(b.toolUseId) : undefined;
+        return (
+          <ToolResultBlock
+            key={i}
+            text={b.text}
+            isError={b.isError}
+            diff={diff ?? null}
+            parent={parent ?? null}
+          />
+        );
       })}
     </div>
   );
@@ -204,10 +218,12 @@ function ToolResultBlock({
   text,
   isError,
   diff,
+  parent,
 }: {
   text: string;
   isError: boolean;
   diff: DiffToolUse | null;
+  parent: { name: string; input: unknown } | null;
 }) {
   const [open, setOpen] = useState(diff !== null && !isError);
   const { text: safe, truncated } = truncate(text);
@@ -224,21 +240,25 @@ function ToolResultBlock({
       : 'tool_result';
   return (
     <div className={`rounded-md border ${tone}`}>
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs"
-      >
-        <span className="text-neutral-400">{open ? '▼' : '▶'}</span>
-        <span
-          className={`font-mono text-[10px] uppercase tracking-wider ${
-            isError ? 'text-red-300' : 'text-sky-300'
-          }`}
+      <div className="flex w-full items-center gap-2 px-3 py-2 text-xs">
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          className="flex flex-1 items-center gap-2 text-left"
+          aria-expanded={open}
         >
-          {headerLabel}
-        </span>
-        {!open && <span className="truncate font-mono text-neutral-500">{summary}</span>}
-      </button>
+          <span className="text-neutral-400">{open ? '▼' : '▶'}</span>
+          <span
+            className={`font-mono text-[10px] uppercase tracking-wider ${
+              isError ? 'text-red-300' : 'text-sky-300'
+            }`}
+          >
+            {headerLabel}
+          </span>
+          {!open && <span className="truncate font-mono text-neutral-500">{summary}</span>}
+        </button>
+        <ParentToolUseTrigger parent={parent} />
+      </div>
       {open && (
         <div className="border-t border-neutral-800 px-3 pb-3 pt-2">
           {showDiff ? (
@@ -260,17 +280,79 @@ function ToolResultBlock({
   );
 }
 
+function ParentToolUseTrigger({ parent }: { parent: { name: string; input: unknown } | null }) {
+  const hasParent = parent !== null;
+  return (
+    <Popover>
+      <PopoverTrigger
+        aria-label={hasParent ? `Show parent tool_use (${parent.name})` : 'No parent tool_use'}
+        title={hasParent ? `Parent: ${parent.name}` : 'No linked tool_use'}
+        className={`rounded px-1.5 py-0.5 font-mono text-[10px] tracking-wide transition-colors ${
+          hasParent
+            ? 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700 hover:text-neutral-100'
+            : 'cursor-not-allowed bg-neutral-900 text-neutral-600'
+        }`}
+        disabled={!hasParent}
+      >
+        parent
+      </PopoverTrigger>
+      <PopoverContent>
+        {hasParent ? (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 font-mono">
+              <span className="text-[10px] uppercase tracking-wider text-neutral-500">parent</span>
+              <span className="text-sm font-semibold text-amber-300">{parent.name}</span>
+            </div>
+            <PopoverInput input={parent.input} />
+          </div>
+        ) : (
+          <div className="text-neutral-500">No linked tool_use event in this session.</div>
+        )}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function PopoverInput({ input }: { input: unknown }) {
+  if (input === undefined || input === null) {
+    return <div className="text-neutral-500">No input.</div>;
+  }
+  let raw: string;
+  try {
+    raw = JSON.stringify(input, null, 2);
+  } catch {
+    raw = '[unserialisable]';
+  }
+  const truncated = raw.length > POPOVER_INPUT_MAX_BYTES;
+  const shown = truncated ? raw.slice(0, POPOVER_INPUT_MAX_BYTES) : raw;
+  return (
+    <>
+      <pre className="max-h-64 overflow-auto whitespace-pre-wrap break-words rounded bg-neutral-900 p-2 font-mono text-[11px] text-neutral-200">
+        {shown}
+      </pre>
+      {truncated && <TruncatedHint />}
+    </>
+  );
+}
+
 export function UserMsg({
   ev,
   registry,
+  parentRegistry,
 }: {
   ev: Extract<JsonlEvent, { type: 'user' }>;
   registry?: ToolUseRegistry | undefined;
+  parentRegistry?: ParentToolUseRegistry | undefined;
 }) {
   const blocks = splitBlocks(ev.message.content);
   return (
     <Wrapper role="user" color="text-blue-400" timestamp={ev.timestamp}>
-      <Blocks blocks={blocks} markdown={false} registry={registry} />
+      <Blocks
+        blocks={blocks}
+        markdown={false}
+        registry={registry}
+        parentRegistry={parentRegistry}
+      />
     </Wrapper>
   );
 }
@@ -278,14 +360,16 @@ export function UserMsg({
 export function AssistantMsg({
   ev,
   registry,
+  parentRegistry,
 }: {
   ev: Extract<JsonlEvent, { type: 'assistant' }>;
   registry?: ToolUseRegistry | undefined;
+  parentRegistry?: ParentToolUseRegistry | undefined;
 }) {
   const blocks = splitBlocks(ev.message.content);
   return (
     <Wrapper role="assistant" color="text-emerald-400" timestamp={ev.timestamp}>
-      <Blocks blocks={blocks} markdown={true} registry={registry} />
+      <Blocks blocks={blocks} markdown={true} registry={registry} parentRegistry={parentRegistry} />
     </Wrapper>
   );
 }
@@ -420,12 +504,17 @@ export function FileHistoryMsg({
   );
 }
 
-export function renderEvent(ev: JsonlEvent, key: number, registry?: ToolUseRegistry) {
+export function renderEvent(
+  ev: JsonlEvent,
+  key: number,
+  registry?: ToolUseRegistry,
+  parentRegistry?: ParentToolUseRegistry,
+) {
   switch (ev.type) {
     case 'user':
-      return <UserMsg key={key} ev={ev} registry={registry} />;
+      return <UserMsg key={key} ev={ev} registry={registry} parentRegistry={parentRegistry} />;
     case 'assistant':
-      return <AssistantMsg key={key} ev={ev} registry={registry} />;
+      return <AssistantMsg key={key} ev={ev} registry={registry} parentRegistry={parentRegistry} />;
     case 'tool_use':
       return <ToolUseMsg key={key} ev={ev} />;
     case 'tool_result':

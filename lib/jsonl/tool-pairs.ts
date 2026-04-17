@@ -83,3 +83,35 @@ export function buildToolUseRegistry(events: readonly JsonlEvent[]): Map<string,
   }
   return map;
 }
+
+/**
+ * Generic parent tool_use lookup for the popover on tool_result blocks.
+ * Unlike buildToolUseRegistry, this keeps EVERY tool_use regardless of name
+ * so the UI can show which call produced a given result.
+ */
+export interface ParentToolUse {
+  name: string;
+  input: unknown;
+}
+export type ParentToolUseRegistry = ReadonlyMap<string, ParentToolUse>;
+
+export function buildParentToolUseRegistry(
+  events: readonly JsonlEvent[],
+): Map<string, ParentToolUse> {
+  const map = new Map<string, ParentToolUse>();
+  for (const ev of events) {
+    if (ev.type !== 'user' && ev.type !== 'assistant') continue;
+    const content = (ev as { message: { content: unknown } }).message.content;
+    if (!Array.isArray(content)) continue;
+    for (const block of content) {
+      if (!block || typeof block !== 'object') continue;
+      const b = block as Record<string, unknown>;
+      if (b['type'] !== 'tool_use') continue;
+      const id = typeof b['id'] === 'string' ? b['id'] : '';
+      if (!id || map.has(id)) continue;
+      const name = typeof b['name'] === 'string' ? b['name'] : 'unknown';
+      map.set(id, { name, input: b['input'] });
+    }
+  }
+  return map;
+}
