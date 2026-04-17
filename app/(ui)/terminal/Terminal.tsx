@@ -154,7 +154,7 @@ export function Terminal({ cwd, shell, args, initCommand }: TerminalProps) {
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
-    toastInfo('Zapisano bufor terminala', { description: a.download });
+    toastInfo('Terminal buffer saved', { description: a.download });
   };
 
   return (
@@ -163,11 +163,11 @@ export function Terminal({ cwd, shell, args, initCommand }: TerminalProps) {
         <span className="font-mono">{cwd}</span>
         <span className="flex items-center gap-2">
           <StatusBadge status={status} />
-          <Button size="sm" variant="ghost" onClick={handleClear} title="Wyczyść bufor">
-            Wyczyść
+          <Button size="sm" variant="ghost" onClick={handleClear} title="Clear buffer">
+            Clear
           </Button>
-          <Button size="sm" variant="ghost" onClick={handleSave} title="Pobierz bufor jako .txt">
-            Zapisz
+          <Button size="sm" variant="ghost" onClick={handleSave} title="Download buffer as .txt">
+            Save
           </Button>
           <Button
             size="sm"

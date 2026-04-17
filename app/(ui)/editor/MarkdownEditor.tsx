@@ -168,9 +168,9 @@ export function MarkdownEditor() {
     } catch (err) {
       const e = err as { code?: string };
       if (e.code === 'conflict') {
-        toastWarning('Plik zmienił się na dysku', {
+        toastWarning('File changed on disk', {
           id: 'claude-md-conflict',
-          description: 'Pobierz najnowszą wersję (stracisz bieżące edycje).',
+          description: 'Reload the latest version (current edits will be lost).',
           duration: 8000,
           action: {
             label: 'Reload',
@@ -180,7 +180,7 @@ export function MarkdownEditor() {
           },
         });
       } else {
-        toastError('Błąd zapisu CLAUDE.md', {
+        toastError('Failed to save CLAUDE.md', {
           id: 'claude-md-save-error',
           description: e.code ?? 'save_failed',
         });
@@ -275,7 +275,7 @@ export function MarkdownEditor() {
             variant={preview ? 'secondary' : 'ghost'}
             onClick={togglePreview}
             aria-pressed={preview}
-            title="Podgląd markdown"
+            title="Toggle markdown preview"
           >
             Preview
           </Button>

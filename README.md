@@ -171,7 +171,10 @@ returns zero.
 ## Quick start
 
 Requirements: Node 20.11+, pnpm 9+, Chromium or Google Chrome. Linux
-tested on Ubuntu 22.04+; macOS and Windows are out of scope for v1.
+is the primary target (Ubuntu 22.04+ tested); macOS support is being
+rolled in per the `PLATFORM_I18N_PLAN.md` roadmap. On Windows run the
+launcher inside WSL — the Windows-native shell is intentionally out of
+scope. The UI ships in English.
 
 ```bash
 git clone https://github.com/bartek-filipiuk/claude-ui.git

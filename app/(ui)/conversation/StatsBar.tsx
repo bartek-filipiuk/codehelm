@@ -28,10 +28,10 @@ export function StatsBar({ events }: StatsBarProps) {
 
   const duration = formatDuration(stats.durationMs);
   const topTools = summarizeTopTools(stats);
-  const tokenSummary = stats.totalTokens > 0 ? `${formatTokens(stats.totalTokens)} tokenów` : null;
+  const tokenSummary = stats.totalTokens > 0 ? `${formatTokens(stats.totalTokens)} tokens` : null;
   const summaryParts = [
     duration,
-    `${stats.eventCount} zdarzeń`,
+    `${stats.eventCount} events`,
     tokenSummary,
     topTools || null,
   ].filter((p): p is string => Boolean(p));
@@ -47,7 +47,7 @@ export function StatsBar({ events }: StatsBarProps) {
           'flex h-6 w-full items-center gap-2 px-4 text-left text-neutral-400',
           'hover:text-neutral-200',
         )}
-        title={expanded ? 'Zwiń statystyki' : 'Rozwiń statystyki'}
+        title={expanded ? 'Collapse stats' : 'Expand stats'}
       >
         <span aria-hidden className="font-mono text-[10px] text-neutral-500">
           {expanded ? '▾' : '▸'}
@@ -61,48 +61,48 @@ export function StatsBar({ events }: StatsBarProps) {
         >
           <dl className="space-y-1">
             <div className="flex justify-between gap-2">
-              <dt className="text-neutral-500">Czas trwania</dt>
+              <dt className="text-neutral-500">Duration</dt>
               <dd className="font-mono">{duration}</dd>
             </div>
             <div className="flex justify-between gap-2">
-              <dt className="text-neutral-500">Zdarzenia</dt>
+              <dt className="text-neutral-500">Events</dt>
               <dd className="font-mono">{stats.eventCount}</dd>
             </div>
             <div className="flex justify-between gap-2">
-              <dt className="text-neutral-500">Początek</dt>
+              <dt className="text-neutral-500">Start</dt>
               <dd className="font-mono text-[10px]">{stats.firstTimestamp ?? '—'}</dd>
             </div>
             <div className="flex justify-between gap-2">
-              <dt className="text-neutral-500">Koniec</dt>
+              <dt className="text-neutral-500">End</dt>
               <dd className="font-mono text-[10px]">{stats.lastTimestamp ?? '—'}</dd>
             </div>
           </dl>
           <dl className="space-y-1">
             <div className="flex justify-between gap-2">
-              <dt className="text-neutral-500">Tokeny wejściowe</dt>
+              <dt className="text-neutral-500">Input tokens</dt>
               <dd className="font-mono">{formatTokens(stats.inputTokens)}</dd>
             </div>
             <div className="flex justify-between gap-2">
-              <dt className="text-neutral-500">Tokeny wyjściowe</dt>
+              <dt className="text-neutral-500">Output tokens</dt>
               <dd className="font-mono">{formatTokens(stats.outputTokens)}</dd>
             </div>
             <div className="flex justify-between gap-2">
-              <dt className="text-neutral-500">Cache (zapis)</dt>
+              <dt className="text-neutral-500">Cache (write)</dt>
               <dd className="font-mono">{formatTokens(stats.cacheCreationInputTokens)}</dd>
             </div>
             <div className="flex justify-between gap-2">
-              <dt className="text-neutral-500">Cache (odczyt)</dt>
+              <dt className="text-neutral-500">Cache (read)</dt>
               <dd className="font-mono">{formatTokens(stats.cacheReadInputTokens)}</dd>
             </div>
             <div className="flex justify-between gap-2 border-t border-neutral-800 pt-1">
-              <dt className="text-neutral-400">Razem</dt>
+              <dt className="text-neutral-400">Total</dt>
               <dd className="font-mono text-neutral-100">{formatTokens(stats.totalTokens)}</dd>
             </div>
           </dl>
           <div className="space-y-1">
-            <div className="text-neutral-500">Narzędzia</div>
+            <div className="text-neutral-500">Tools</div>
             {stats.toolCounts.length === 0 ? (
-              <div className="text-neutral-600">Brak wywołań narzędzi.</div>
+              <div className="text-neutral-600">No tool calls.</div>
             ) : (
               <ul className="space-y-0.5">
                 {stats.toolCounts.slice(0, 10).map((t) => (

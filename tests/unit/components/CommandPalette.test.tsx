@@ -132,10 +132,10 @@ describe('<CommandPalette />', () => {
     act(() => {
       dispatchCtrlK();
     });
-    expect(screen.getByText('Nowy shell w bieżącym projekcie')).toBeDefined();
-    expect(screen.getByText('Otwórz CLAUDE.md (globalny)')).toBeDefined();
-    expect(screen.getByText('Otwórz CLAUDE.md (bieżący projekt)')).toBeDefined();
-    expect(screen.getByText('Zamknij bieżącą kartę terminala')).toBeDefined();
+    expect(screen.getByText('New shell in current project')).toBeDefined();
+    expect(screen.getByText('Open CLAUDE.md (global)')).toBeDefined();
+    expect(screen.getByText('Open CLAUDE.md (current project)')).toBeDefined();
+    expect(screen.getByText('Close current terminal tab')).toBeDefined();
   });
 
   it('global CLAUDE.md action unselects project and opens editor', async () => {
@@ -144,7 +144,7 @@ describe('<CommandPalette />', () => {
     act(() => {
       dispatchCtrlK();
     });
-    const item = screen.getByText('Otwórz CLAUDE.md (globalny)');
+    const item = screen.getByText('Open CLAUDE.md (global)');
     act(() => {
       item.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     });

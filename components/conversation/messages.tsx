@@ -386,7 +386,7 @@ export function ToolUseMsg({ ev }: { ev: Extract<JsonlEvent, { type: 'tool_use' 
           type="button"
           onClick={() => setOpen((o) => !o)}
           className="rounded px-1 text-xs text-neutral-400 hover:bg-neutral-800"
-          aria-label={open ? 'Zwiń' : 'Rozwiń'}
+          aria-label={open ? 'Collapse' : 'Expand'}
         >
           {open ? '▼' : '▶'}
         </button>
@@ -412,7 +412,7 @@ export function ToolResultMsg({ ev }: { ev: Extract<JsonlEvent, { type: 'tool_re
           type="button"
           onClick={() => setOpen((o) => !o)}
           className="rounded px-1 text-xs text-neutral-400 hover:bg-neutral-800"
-          aria-label={open ? 'Zwiń' : 'Rozwiń'}
+          aria-label={open ? 'Collapse' : 'Expand'}
           disabled={!hasOutput}
         >
           {open ? '▼' : hasOutput ? '▶' : ' '}
@@ -533,5 +533,5 @@ export function renderEvent(
 }
 
 function TruncatedHint() {
-  return <p className="mt-2 text-xs text-amber-400">Treść przycięta do 10 MB (render limit).</p>;
+  return <p className="mt-2 text-xs text-amber-400">Content truncated at 10 MB (render limit).</p>;
 }

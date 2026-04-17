@@ -138,7 +138,7 @@ export function Viewer() {
   if (!sessionId) {
     return (
       <div className="flex h-full items-center justify-center p-8 text-sm text-neutral-500">
-        Wybierz sesję z listy.
+        Pick a session to start.
       </div>
     );
   }
@@ -155,7 +155,7 @@ export function Viewer() {
   const handleJump = () => {
     const idx = parseJumpQuery(jumpQuery, events);
     if (idx == null) {
-      toastError('Nie rozumiem. Użyj numeru (42) albo offsetu (5m, 1h30m).');
+      toastError('Unrecognised. Use an event number (42) or an offset (5m, 1h30m).');
       return;
     }
     const visibleIdx = visibleEvents.findIndex((v) => v.origIndex === idx);
@@ -218,7 +218,7 @@ export function Viewer() {
           variant="ghost"
           onClick={() => goToHit(hitIndex + 1)}
           disabled={hits.length === 0}
-          title="Następne trafienie"
+          title="Next match"
         >
           ↓
         </Button>
@@ -227,7 +227,7 @@ export function Viewer() {
           variant={onlyHits ? 'secondary' : 'ghost'}
           onClick={() => setOnlyHits((v) => !v)}
           disabled={!query}
-          title="Pokazuj tylko wiadomości z trafieniem"
+          title="Show only messages with a match"
         >
           tylko ▾
         </Button>
@@ -245,7 +245,7 @@ export function Viewer() {
             placeholder="np. 42 · 5m · 1h30m"
             className="h-8 w-36 text-xs"
             aria-label="Skocz do zdarzenia"
-            title="Numer zdarzenia (42) lub offset od początku (5m, 1h30m)"
+            title="Event number (42) or offset from the session start (5m, 1h30m)"
           />
           <Button
             size="sm"
@@ -265,8 +265,8 @@ export function Viewer() {
           disabled={replayState.active}
           title={
             replayState.active
-              ? 'Follow wyłączone w trybie Replay'
-              : 'Automatyczne przewijanie do najnowszej wiadomości'
+              ? 'Follow is disabled in Replay mode'
+              : 'Auto-scroll to the newest message'
           }
         >
           {follow ? 'Follow: on' : 'Follow: off'}
@@ -320,7 +320,7 @@ export function Viewer() {
 
       {error && (
         <div className="border-b border-red-900 bg-red-900/20 px-4 py-2 text-sm text-red-300">
-          Błąd: {error}
+          Error: {error}
         </div>
       )}
 
@@ -334,7 +334,7 @@ export function Viewer() {
             </div>
           ) : visibleEvents.length === 0 ? (
             <div className="flex h-full items-center justify-center p-8 text-sm text-neutral-500">
-              Żadne zdarzenie nie pasuje do filtrów.
+              No event matches the current filters.
             </div>
           ) : (
             <Virtuoso

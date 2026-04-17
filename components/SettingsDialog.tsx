@@ -34,21 +34,21 @@ import { TIMESTAMP_FORMATS, type TimestampFormat } from '@/lib/jsonl/format-time
 import { cn } from '@/lib/utils';
 
 const VIEWER_FONT_LABEL: Record<ViewerFontSize, string> = {
-  xs: 'Bardzo mały',
-  sm: 'Mały',
-  md: 'Średni',
-  lg: 'Duży',
+  xs: 'Extra small',
+  sm: 'Small',
+  md: 'Medium',
+  lg: 'Large',
 };
 
 const DENSITY_LABEL: Record<ViewerDensity, string> = {
-  compact: 'Zwarty',
-  comfortable: 'Wygodny',
-  spacious: 'Przestronny',
+  compact: 'Compact',
+  comfortable: 'Comfortable',
+  spacious: 'Spacious',
 };
 
 const THEME_LABEL: Record<Theme, string> = {
-  dark: 'Ciemny',
-  darker: 'Ciemniejszy',
+  dark: 'Dark',
+  darker: 'Darker',
   'solarized-dark': 'Solarized dark',
 };
 
@@ -56,27 +56,27 @@ const MODEL_LABEL: Record<ModelRateKey, string> = {
   'opus-4': 'Opus 4',
   'sonnet-4': 'Sonnet 4',
   'haiku-4': 'Haiku 4',
-  default: 'Domyślny (nieznany model)',
+  default: 'Default (unknown model)',
 };
 
 const CATEGORY_LABEL: Record<EventCategory, string> = {
-  user: 'Użytkownik',
-  assistant: 'Asystent',
-  tools: 'Narzędzia',
+  user: 'User',
+  assistant: 'Assistant',
+  tools: 'Tools',
   system: 'System',
 };
 
 const TIMESTAMP_LABEL: Record<TimestampFormat, string> = {
-  relative: 'Względny (np. 2 min temu)',
+  relative: 'Relative (e.g. 2 min ago)',
   iso: 'ISO (2026-04-16T12:00:00Z)',
-  local: 'Lokalny (14:00:05)',
+  local: 'Local (14:00:05)',
 };
 
 const RATE_FIELDS: { key: keyof ModelRate; label: string }[] = [
-  { key: 'input', label: 'Wejście' },
-  { key: 'output', label: 'Wyjście' },
-  { key: 'cacheWrite', label: 'Zapis cache' },
-  { key: 'cacheRead', label: 'Odczyt cache' },
+  { key: 'input', label: 'Input' },
+  { key: 'output', label: 'Output' },
+  { key: 'cacheWrite', label: 'Cache write' },
+  { key: 'cacheRead', label: 'Cache read' },
 ];
 
 export function SettingsDialog() {
@@ -113,8 +113,8 @@ export function SettingsDialog() {
       <DialogTrigger asChild>
         <button
           type="button"
-          aria-label="Ustawienia"
-          title="Ustawienia"
+          aria-label="Settings"
+          title="Settings"
           className="rounded p-1 text-neutral-400 hover:bg-neutral-800 hover:text-neutral-100 focus:outline-none focus-visible:ring-1 focus-visible:ring-neutral-400"
         >
           <SettingsIcon className="h-4 w-4" aria-hidden="true" />
@@ -122,14 +122,14 @@ export function SettingsDialog() {
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Ustawienia</DialogTitle>
+          <DialogTitle>Settings</DialogTitle>
           <DialogDescription>
-            Wygląd aplikacji i czcionki. Zapis jest natychmiastowy.
+            Appearance and typography. Changes are saved immediately.
           </DialogDescription>
         </DialogHeader>
 
         <form className="flex flex-col gap-4 text-sm" onSubmit={(e) => e.preventDefault()}>
-          <Field label="Rozmiar czcionki w historii" htmlFor="viewerFontSize">
+          <Field label="Viewer font size" htmlFor="viewerFontSize">
             <select
               id="viewerFontSize"
               value={current.viewerFontSize}
@@ -145,7 +145,7 @@ export function SettingsDialog() {
             </select>
           </Field>
 
-          <Field label="Rozmiar czcionki w terminalu" htmlFor="terminalFontSize">
+          <Field label="Terminal font size" htmlFor="terminalFontSize">
             <select
               id="terminalFontSize"
               value={current.terminalFontSize}
@@ -163,7 +163,7 @@ export function SettingsDialog() {
             </select>
           </Field>
 
-          <Field label="Gęstość widoku" htmlFor="viewerDensity">
+          <Field label="Viewer density" htmlFor="viewerDensity">
             <select
               id="viewerDensity"
               value={current.viewerDensity}
@@ -179,7 +179,7 @@ export function SettingsDialog() {
             </select>
           </Field>
 
-          <Field label="Motyw" htmlFor="theme">
+          <Field label="Theme" htmlFor="theme">
             <select
               id="theme"
               value={current.theme}
@@ -195,7 +195,7 @@ export function SettingsDialog() {
             </select>
           </Field>
 
-          <Field label="Format znacznika czasu" htmlFor="timestampFormat">
+          <Field label="Timestamp format" htmlFor="timestampFormat">
             <select
               id="timestampFormat"
               value={current.timestampFormat}
@@ -212,10 +212,10 @@ export function SettingsDialog() {
           </Field>
 
           <fieldset className="flex flex-col gap-2 border-t border-neutral-800 pt-4">
-            <legend className="text-neutral-300">Domyślnie ukryte kategorie</legend>
+            <legend className="text-neutral-300">Default hidden categories</legend>
             <p className="text-[11px] text-neutral-500">
-              Wybrane kategorie startują ukryte przy otwarciu sesji. Chipsy w widoku sesji nadal
-              można przełączać lokalnie.
+              Selected categories start hidden when a session opens. The chips in the session view
+              can still be toggled locally.
             </p>
             <div className="flex flex-wrap gap-2">
               {EVENT_CATEGORIES.map((c) => {
@@ -242,7 +242,7 @@ export function SettingsDialog() {
           </fieldset>
 
           <fieldset className="flex flex-col gap-2 border-t border-neutral-800 pt-4">
-            <legend className="text-neutral-300">Cennik modeli (USD / 1 mln tokenów)</legend>
+            <legend className="text-neutral-300">Model pricing (USD / 1M tokens)</legend>
             <div className="grid grid-cols-[minmax(0,1fr)_repeat(4,5rem)] items-center gap-2 text-[11px] text-neutral-500">
               <span />
               {RATE_FIELDS.map((f) => (

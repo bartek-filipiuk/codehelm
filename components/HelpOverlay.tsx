@@ -16,14 +16,14 @@ interface Shortcut {
 }
 
 const SHORTCUTS: ReadonlyArray<Shortcut> = [
-  { keys: '?', label: 'Pokaż/ukryj listę skrótów' },
-  { keys: 'Ctrl+K', label: 'Paleta poleceń' },
-  { keys: 'Ctrl+S', label: 'Zapisz CLAUDE.md' },
-  { keys: 'Ctrl+T', label: 'Nowa karta terminala' },
-  { keys: '/', label: 'Fokus w wyszukiwarce projektów' },
-  { keys: 'g g', label: 'Przewiń viewer na górę' },
-  { keys: 'G', label: 'Przewiń viewer na dół' },
-  { keys: 'Esc', label: 'Zamknij dialog' },
+  { keys: '?', label: 'Toggle this shortcuts overlay' },
+  { keys: 'Ctrl+K', label: 'Command palette' },
+  { keys: 'Ctrl+S', label: 'Save CLAUDE.md' },
+  { keys: 'Ctrl+T', label: 'New terminal tab' },
+  { keys: '/', label: 'Focus the project search' },
+  { keys: 'g g', label: 'Scroll viewer to top' },
+  { keys: 'G', label: 'Scroll viewer to bottom' },
+  { keys: 'Esc', label: 'Close dialog' },
 ];
 
 export function HelpOverlay() {
@@ -43,10 +43,8 @@ export function HelpOverlay() {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Skróty klawiaturowe</DialogTitle>
-          <DialogDescription>
-            Naciśnij ? poza polem tekstowym, aby przełączyć ten widok.
-          </DialogDescription>
+          <DialogTitle>Keyboard shortcuts</DialogTitle>
+          <DialogDescription>Press ? outside any text field to toggle this view.</DialogDescription>
         </DialogHeader>
         <ul className="flex flex-col gap-2 text-sm" data-testid="help-overlay-list">
           {SHORTCUTS.map((shortcut) => (
