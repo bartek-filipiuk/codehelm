@@ -10,7 +10,6 @@ interface UiState {
   terminalOpen: boolean;
   terminalCwd: string | null;
   editorOpen: boolean;
-  graphOpen: boolean;
   /** One-shot: Viewer consumes this, scrolls to the event, and clears it. */
   pendingEventIndex: number | null;
   sortMode: SortMode;
@@ -21,8 +20,6 @@ interface UiState {
   closeTerminal: () => void;
   openEditor: () => void;
   closeEditor: () => void;
-  openGraph: () => void;
-  closeGraph: () => void;
   jumpToEvent: (index: number) => void;
   consumePendingEvent: () => void;
   setSortMode: (mode: SortMode) => void;
@@ -43,7 +40,6 @@ export const useUiStore = create<UiState>((set) => ({
   terminalOpen: false,
   terminalCwd: null,
   editorOpen: false,
-  graphOpen: false,
   pendingEventIndex: null,
   sortMode: initialSortMode(),
   setSelectedProject: (slug) =>
@@ -52,19 +48,15 @@ export const useUiStore = create<UiState>((set) => ({
       selectedSessionId: null,
       terminalOpen: false,
       editorOpen: false,
-      graphOpen: false,
     })),
-  setSelectedSession: (id) => set({ selectedSessionId: id, graphOpen: false }),
+  setSelectedSession: (id) => set({ selectedSessionId: id }),
   setSearch: (q) => set({ search: q }),
-  openTerminal: (cwd) =>
-    set({ terminalOpen: true, terminalCwd: cwd, editorOpen: false, graphOpen: false }),
+  openTerminal: (cwd) => set({ terminalOpen: true, terminalCwd: cwd, editorOpen: false }),
   closeTerminal: () => set({ terminalOpen: false, terminalCwd: null }),
-  openEditor: () => set({ editorOpen: true, terminalOpen: false, graphOpen: false }),
+  openEditor: () => set({ editorOpen: true, terminalOpen: false }),
   closeEditor: () => set({ editorOpen: false }),
-  openGraph: () => set({ graphOpen: true, editorOpen: false, terminalOpen: false }),
-  closeGraph: () => set({ graphOpen: false }),
   jumpToEvent: (index) =>
-    set({ graphOpen: false, editorOpen: false, terminalOpen: false, pendingEventIndex: index }),
+    set({ editorOpen: false, terminalOpen: false, pendingEventIndex: index }),
   consumePendingEvent: () => set({ pendingEventIndex: null }),
   setSortMode: (mode) => {
     patchLayout({ sortMode: mode });
