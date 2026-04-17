@@ -140,7 +140,7 @@ export function ResizableColumns({ sidebar, sessions, viewer }: ResizableColumns
       <div
         role="separator"
         aria-orientation="vertical"
-        aria-label="Zmień szerokość bocznego panelu"
+        aria-label="Resize sidebar"
         aria-valuemin={MIN_SIDEBAR}
         aria-valuenow={widths.sidebar}
         tabIndex={0}
@@ -154,7 +154,7 @@ export function ResizableColumns({ sidebar, sessions, viewer }: ResizableColumns
       <div
         role="separator"
         aria-orientation="vertical"
-        aria-label="Zmień szerokość listy sesji"
+        aria-label="Resize session list"
         aria-valuemin={MIN_SESSIONS}
         aria-valuenow={widths.sessions}
         tabIndex={0}

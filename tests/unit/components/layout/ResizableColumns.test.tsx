@@ -44,14 +44,14 @@ describe('clampWidths', () => {
     expect(w.sessions).toBe(MIN_SESSIONS);
   });
 
-  it('nie pozwala odebrać przestrzeni viewerowi', () => {
+  it('does not let the viewer lose its minimum space', () => {
     // viewport = 1000, splitters = 8, sidebar wants 800 -> clamped so viewer >= 400
     const w = clampWidths({ sidebar: 800, sessions: 240 }, 1000);
     expect(w.sidebar).toBeLessThanOrEqual(1000 - 8 - MIN_SESSIONS - MIN_VIEWER);
     expect(w.sidebar).toBeGreaterThanOrEqual(MIN_SIDEBAR);
   });
 
-  it('zachowuje sensowne wartości w przestronnym viewporcie', () => {
+  it('keeps sensible widths on a wide viewport', () => {
     const w = clampWidths({ sidebar: 400, sessions: 360 }, 1920);
     expect(w.sidebar).toBe(400);
     expect(w.sessions).toBe(360);
@@ -76,7 +76,7 @@ describe('loadWidths', () => {
     expect(loadWidths()).toEqual({ sidebar: DEFAULT_SIDEBAR, sessions: DEFAULT_SESSIONS });
   });
 
-  it('odrzuca wartości nienumeryczne', () => {
+  it('rejects non-numeric values', () => {
     window.localStorage.setItem(
       LAYOUT_STORAGE_KEY,
       JSON.stringify({ sidebar: 'abc', sessions: null }),
@@ -101,7 +101,7 @@ describe('<ResizableColumns />', () => {
     expect(template).toContain(`${DEFAULT_SESSIONS}px`);
   });
 
-  it('hydratuje szerokości z localStorage', async () => {
+  it('hydrates widths from localStorage', async () => {
     window.localStorage.setItem(
       LAYOUT_STORAGE_KEY,
       JSON.stringify({ sidebar: 420, sessions: 280 }),
@@ -114,7 +114,7 @@ describe('<ResizableColumns />', () => {
     expect(template).toContain('280px');
   });
 
-  it('zapisuje nowe szerokości do localStorage pod kluczem claude-ui:layout', async () => {
+  it('persists new widths to localStorage under claude-ui:layout', async () => {
     renderLayout();
     await act(async () => {});
     const splitter = screen.getByTestId('splitter-sidebar');
@@ -127,7 +127,7 @@ describe('<ResizableColumns />', () => {
     expect(parsed.sidebar).toBeGreaterThan(DEFAULT_SIDEBAR);
   });
 
-  it('ArrowLeft / ArrowRight zmienia szerokość sidebar', async () => {
+  it('ArrowLeft / ArrowRight resizes the sidebar', async () => {
     renderLayout();
     await act(async () => {});
     const splitter = screen.getByTestId('splitter-sidebar');
@@ -142,7 +142,7 @@ describe('<ResizableColumns />', () => {
     expect(getTemplate()).toContain(`${DEFAULT_SIDEBAR - 16}px`);
   });
 
-  it('ArrowRight na sessions-splitter zmienia szerokość sesji', async () => {
+  it('ArrowRight on the sessions splitter resizes the session list', async () => {
     renderLayout();
     await act(async () => {});
     const splitter = screen.getByTestId('splitter-sessions');
@@ -152,7 +152,7 @@ describe('<ResizableColumns />', () => {
     expect(getTemplate()).toContain(`${DEFAULT_SESSIONS + 16}px`);
   });
 
-  it('ArrowLeft nie schodzi poniżej MIN_SIDEBAR', async () => {
+  it('ArrowLeft does not drop below MIN_SIDEBAR', async () => {
     window.localStorage.setItem(
       LAYOUT_STORAGE_KEY,
       JSON.stringify({ sidebar: MIN_SIDEBAR, sessions: MIN_SESSIONS }),
@@ -166,7 +166,7 @@ describe('<ResizableColumns />', () => {
     expect(getTemplate()).toContain(`${MIN_SIDEBAR}px`);
   });
 
-  it('double-click resetuje szerokości do defaults', async () => {
+  it('double-click resets widths to defaults', async () => {
     window.localStorage.setItem(
       LAYOUT_STORAGE_KEY,
       JSON.stringify({ sidebar: 500, sessions: 400 }),
@@ -182,12 +182,12 @@ describe('<ResizableColumns />', () => {
     expect(template).toContain(`${DEFAULT_SESSIONS}px`);
   });
 
-  it('splittery mają role=separator i aria-labele po polsku', () => {
+  it('splitters have role=separator and English aria-labels', () => {
     renderLayout();
     const separators = screen.getAllByRole('separator');
     expect(separators.map((s) => s.getAttribute('aria-label'))).toEqual([
-      'Zmień szerokość bocznego panelu',
-      'Zmień szerokość listy sesji',
+      'Resize sidebar',
+      'Resize session list',
     ]);
     for (const s of separators) {
       expect(s.getAttribute('aria-orientation')).toBe('vertical');
