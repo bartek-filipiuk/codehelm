@@ -152,7 +152,7 @@ next `[ ]`. Never reorder or delete tasks — only check them off.
 
 ### T11 — Markdown preview in CLAUDE.md editor
 
-- [ ] **Goal:** toggle button "Preview" in editor header that splits
+- [x] **Goal:** toggle button "Preview" in editor header that splits
   the view 50/50: left CodeMirror, right rendered markdown (same
   renderer as assistant messages — react-markdown + rehype-sanitize).
 - **Touch:** `app/(ui)/editor/MarkdownEditor.tsx`, reuse
