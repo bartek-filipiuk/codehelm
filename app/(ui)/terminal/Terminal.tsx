@@ -21,12 +21,12 @@ export interface TerminalProps {
    * store keyed by this id. External consumers (quick actions) can then
    * `sendToActive` without prop-drilling.
    */
-  tabId?: string;
+  paneId?: string;
 }
 
 const RESIZE_DEBOUNCE_MS = 100;
 
-export function Terminal({ cwd, shell, args, initCommand, tabId }: TerminalProps) {
+export function Terminal({ cwd, shell, args, initCommand, paneId }: TerminalProps) {
   const registerWriter = useTerminalStore((s) => s.registerWriter);
   const unregisterWriter = useTerminalStore((s) => s.unregisterWriter);
   const [gitStatus, setGitStatus] = useState<{ branch: string | null; dirty: boolean } | null>(
@@ -78,10 +78,10 @@ export function Terminal({ cwd, shell, args, initCommand, tabId }: TerminalProps
 
   // Publish our write function to the store so quick actions can reach us.
   useEffect(() => {
-    if (!tabId) return;
-    registerWriter(tabId, write);
-    return () => unregisterWriter(tabId);
-  }, [tabId, write, registerWriter, unregisterWriter]);
+    if (!paneId) return;
+    registerWriter(paneId, write);
+    return () => unregisterWriter(paneId);
+  }, [paneId, write, registerWriter, unregisterWriter]);
 
   // Mount xterm exactly once.
   useEffect(() => {
@@ -137,9 +137,16 @@ export function Terminal({ cwd, shell, args, initCommand, tabId }: TerminalProps
     })();
     return () => {
       disposed = true;
+      if (resizeTimeoutRef.current) {
+        clearTimeout(resizeTimeoutRef.current);
+        resizeTimeoutRef.current = null;
+      }
+      // Null the fit ref before disposing the terminal so any in-flight
+      // ResizeObserver / custom-event handler that reaches `fitRef.current?.fit()`
+      // becomes a no-op instead of hitting a terminal whose internals are gone.
+      fitRef.current = null;
       termRef.current?.dispose();
       termRef.current = null;
-      fitRef.current = null;
       close();
     };
     // Only on mount: cwd/shell/args are fixed per terminal instance.
@@ -161,6 +168,22 @@ export function Terminal({ cwd, shell, args, initCommand, tabId }: TerminalProps
     });
     obs.observe(hostRef.current);
     return () => obs.disconnect();
+  }, []);
+
+  // Refit immediately (in rAF) when a PaneGrid splitter release fires.
+  // ResizeObserver catches this too, but aligning to a frame kills tearing.
+  useEffect(() => {
+    const onEnd = () => {
+      requestAnimationFrame(() => {
+        try {
+          fitRef.current?.fit();
+        } catch {
+          /* ignore */
+        }
+      });
+    };
+    window.addEventListener('codehelm:pane-resize-end', onEnd);
+    return () => window.removeEventListener('codehelm:pane-resize-end', onEnd);
   }, []);
 
   // React to font-size changes from settings without re-mounting xterm.

@@ -17,6 +17,7 @@ import { Viewer } from './Viewer';
 import { TabBar } from '@/app/(ui)/terminal/TabBar';
 import { TabManager } from '@/app/(ui)/terminal/TabManager';
 import { QuickActions } from '@/app/(ui)/terminal/QuickActions';
+import { LayoutPicker } from '@/components/terminal/LayoutPicker';
 import { MarkdownEditor } from '@/app/(ui)/editor/MarkdownEditor';
 import { paletteOpenEvent, helpOpenEvent, settingsOpenEvent } from '@/lib/ui/overlay-events';
 import { cn } from '@/lib/utils';
@@ -140,7 +141,12 @@ export function MainPanel() {
       </header>
       {mode === 'terminal' && (
         <>
-          <TabBar onNewTab={newShellTab} />
+          <div className="flex items-center gap-2">
+            <div className="min-w-0 flex-1">
+              <TabBar onNewTab={newShellTab} />
+            </div>
+            <LayoutPicker />
+          </div>
           <QuickActions />
         </>
       )}

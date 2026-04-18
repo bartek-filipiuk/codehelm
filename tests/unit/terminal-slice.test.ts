@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { useTerminalStore, TERMINAL_TAB_CAP } from '@/stores/terminal-slice';
 import { getTabAlias } from '@/lib/ui/tab-aliases';
 
@@ -15,6 +15,20 @@ describe('terminal-slice', () => {
     const s = useTerminalStore.getState();
     expect(s.tabs).toHaveLength(1);
     expect(s.activeTabId).toBe(id);
+  });
+
+  it('openTab initializes layout="single" with one pane holding shell config', () => {
+    const id = useTerminalStore.getState().openTab({
+      cwd: '/tmp/a',
+      title: 'a',
+      initCommand: 'echo hi',
+    })!;
+    const tab = useTerminalStore.getState().tabs.find((t) => t.id === id)!;
+    expect(tab.layout).toBe('single');
+    expect(tab.panes).toHaveLength(1);
+    expect(tab.panes[0]!.cwd).toBe('/tmp/a');
+    expect(tab.panes[0]!.initCommand).toBe('echo hi');
+    expect(tab.activePaneId).toBe(tab.panes[0]!.id);
   });
 
   it('caps at 16 tabs — the 17th returns null', () => {
@@ -99,6 +113,63 @@ describe('terminal-slice', () => {
       expect(getTabAlias('resume:abc')).toBeNull();
       // store still updates the in-memory title
       expect(useTerminalStore.getState().tabs.find((t) => t.id === id)?.title).toBe('my tab');
+    });
+  });
+
+  describe('pane layouts', () => {
+    it('setLayout("quad") grows panes to 4 with same cwd/shell defaults', () => {
+      const id = useTerminalStore.getState().openTab({ cwd: '/x', title: 'x' })!;
+      useTerminalStore.getState().setLayout(id, 'quad');
+      const tab = useTerminalStore.getState().tabs.find((t) => t.id === id)!;
+      expect(tab.layout).toBe('quad');
+      expect(tab.panes).toHaveLength(4);
+      expect(tab.panes[1]!.cwd).toBe('/x');
+      expect(tab.panes[1]!.initCommand).toBeUndefined();
+      expect(tab.activePaneId).toBe(tab.panes[0]!.id);
+    });
+
+    it('setLayout("single") shrinks panes to 1 (keeps active one)', () => {
+      const id = useTerminalStore.getState().openTab({ cwd: '/x', title: 'x' })!;
+      useTerminalStore.getState().setLayout(id, 'quad');
+      const afterQuad = useTerminalStore.getState().tabs.find((t) => t.id === id)!;
+      const keepId = afterQuad.panes[2]!.id;
+      useTerminalStore.getState().setActivePane(id, keepId);
+      useTerminalStore.getState().setLayout(id, 'single');
+      const tab = useTerminalStore.getState().tabs.find((t) => t.id === id)!;
+      expect(tab.layout).toBe('single');
+      expect(tab.panes).toHaveLength(1);
+      expect(tab.panes[0]!.id).toBe(keepId);
+      expect(tab.activePaneId).toBe(keepId);
+    });
+
+    it('closePane removes the pane; if it was last the tab closes', () => {
+      const id = useTerminalStore.getState().openTab({ cwd: '/x', title: 'x' })!;
+      useTerminalStore.getState().setLayout(id, 'h');
+      const tab = useTerminalStore.getState().tabs.find((t) => t.id === id)!;
+      const victim = tab.panes[1]!.id;
+      useTerminalStore.getState().closePane(id, victim);
+      const after = useTerminalStore.getState().tabs.find((t) => t.id === id)!;
+      expect(after.panes).toHaveLength(1);
+      expect(after.layout).toBe('single');
+      useTerminalStore.getState().closePane(id, after.panes[0]!.id);
+      expect(useTerminalStore.getState().tabs.find((t) => t.id === id)).toBeUndefined();
+    });
+
+    it('setActivePane refuses unknown paneId', () => {
+      const id = useTerminalStore.getState().openTab({ cwd: '/x', title: 'x' })!;
+      const orig = useTerminalStore.getState().tabs.find((t) => t.id === id)!.activePaneId;
+      useTerminalStore.getState().setActivePane(id, 'nope');
+      expect(useTerminalStore.getState().tabs.find((t) => t.id === id)!.activePaneId).toBe(orig);
+    });
+
+    it('sendToActivePane routes to writer keyed by activePaneId', () => {
+      const id = useTerminalStore.getState().openTab({ cwd: '/x', title: 'x' })!;
+      const paneId = useTerminalStore.getState().tabs.find((t) => t.id === id)!.activePaneId;
+      const writer = vi.fn();
+      useTerminalStore.getState().registerWriter(paneId, writer);
+      const ok = useTerminalStore.getState().sendToActivePane('hi\r');
+      expect(ok).toBe(true);
+      expect(writer).toHaveBeenCalledWith('hi\r');
     });
   });
 

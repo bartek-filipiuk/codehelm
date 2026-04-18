@@ -1,6 +1,16 @@
 import { create } from 'zustand';
 import { getTabAlias, patchTabAlias } from '@/lib/ui/tab-aliases';
 
+export type TerminalLayout = 'single' | 'h' | 'v' | 'quad';
+
+export interface TerminalPane {
+  id: string;
+  cwd: string;
+  shell?: string;
+  args?: string[];
+  initCommand?: string;
+}
+
 export interface TerminalTab {
   id: string;
   projectSlug: string | null;
@@ -17,6 +27,9 @@ export interface TerminalTab {
    * plain shells. Absent for ad-hoc tabs (no persistence).
    */
   aliasKey?: string;
+  layout: TerminalLayout;
+  panes: TerminalPane[];
+  activePaneId: string;
 }
 
 export interface TerminalCfg {
@@ -54,6 +67,10 @@ interface State {
   registerWriter: (id: string, writer: (data: string) => void) => void;
   unregisterWriter: (id: string) => void;
   sendToActive: (data: string) => boolean;
+  setLayout: (tabId: string, layout: TerminalLayout) => void;
+  setActivePane: (tabId: string, paneId: string) => void;
+  closePane: (tabId: string, paneId: string) => void;
+  sendToActivePane: (data: string) => boolean;
 }
 
 export const useTerminalStore = create<State>((set, get) => ({
@@ -64,8 +81,17 @@ export const useTerminalStore = create<State>((set, get) => ({
   openTab: (cfg) => {
     const { tabs, _seq } = get();
     if (tabs.length >= MAX_TABS) return null;
-    const id = `t-${Date.now()}-${_seq + 1}`;
+    const nextSeq = _seq + 1;
+    const id = `t-${Date.now()}-${nextSeq}`;
+    const paneId = `p-${Date.now()}-${nextSeq}`;
     const savedAlias = getTabAlias(cfg.aliasKey);
+    const pane: TerminalPane = {
+      id: paneId,
+      cwd: cfg.cwd,
+      ...(cfg.shell !== undefined ? { shell: cfg.shell } : {}),
+      ...(cfg.args !== undefined ? { args: cfg.args } : {}),
+      ...(cfg.initCommand !== undefined ? { initCommand: cfg.initCommand } : {}),
+    };
     const tab: TerminalTab = {
       id,
       projectSlug: cfg.projectSlug ?? null,
@@ -76,8 +102,11 @@ export const useTerminalStore = create<State>((set, get) => ({
       title: savedAlias ?? cfg.title,
       createdAt: Date.now(),
       ...(cfg.aliasKey ? { aliasKey: cfg.aliasKey } : {}),
+      layout: 'single',
+      panes: [pane],
+      activePaneId: paneId,
     };
-    set({ tabs: [...tabs, tab], activeTabId: id, _seq: _seq + 1 });
+    set({ tabs: [...tabs, tab], activeTabId: id, _seq: nextSeq });
     return id;
   },
   closeTab: (id) => {
@@ -113,13 +142,85 @@ export const useTerminalStore = create<State>((set, get) => ({
     const writers = get().writers;
     writers.delete(id);
   },
-  sendToActive: (data) => {
-    const { activeTabId, writers } = get();
+  sendToActive: (data) => get().sendToActivePane(data),
+  sendToActivePane: (data) => {
+    const { tabs, activeTabId, writers } = get();
     if (!activeTabId) return false;
-    const writer = writers.get(activeTabId);
+    const tab = tabs.find((t) => t.id === activeTabId);
+    if (!tab) return false;
+    const writer = writers.get(tab.activePaneId);
     if (!writer) return false;
     writer(data);
     return true;
+  },
+  setLayout: (tabId, layout) => {
+    const state = get();
+    const tab = state.tabs.find((t) => t.id === tabId);
+    if (!tab) return;
+    const target = layout === 'single' ? 1 : layout === 'quad' ? 4 : 2;
+    let panes = tab.panes.slice();
+    let activePaneId = tab.activePaneId;
+    let seq = state._seq;
+    if (panes.length > target) {
+      const keep = panes.find((p) => p.id === activePaneId) ?? panes[0];
+      if (!keep) return;
+      panes = [keep, ...panes.filter((p) => p.id !== keep.id)].slice(0, target);
+      const first = panes[0];
+      if (first && !panes.some((p) => p.id === activePaneId)) activePaneId = first.id;
+    } else if (panes.length < target) {
+      const tmpl = panes[0];
+      if (!tmpl) return;
+      while (panes.length < target) {
+        seq += 1;
+        panes.push({
+          id: `p-${Date.now()}-${seq}`,
+          cwd: tmpl.cwd,
+          ...(tmpl.shell !== undefined ? { shell: tmpl.shell } : {}),
+          ...(tmpl.args !== undefined ? { args: tmpl.args } : {}),
+        });
+      }
+    }
+    set({
+      _seq: seq,
+      tabs: state.tabs.map((t) =>
+        t.id === tabId ? { ...t, layout, panes, activePaneId } : t,
+      ),
+    });
+  },
+  setActivePane: (tabId, paneId) => {
+    set((state) => ({
+      tabs: state.tabs.map((t) =>
+        t.id === tabId && t.panes.some((p) => p.id === paneId)
+          ? { ...t, activePaneId: paneId }
+          : t,
+      ),
+    }));
+  },
+  closePane: (tabId, paneId) => {
+    const state = get();
+    const tab = state.tabs.find((t) => t.id === tabId);
+    if (!tab) return;
+    const remaining = tab.panes.filter((p) => p.id !== paneId);
+    if (remaining.length === 0) {
+      get().closeTab(tabId);
+      return;
+    }
+    const layout: TerminalLayout =
+      remaining.length === 1
+        ? 'single'
+        : remaining.length === 2
+          ? tab.layout === 'v'
+            ? 'v'
+            : 'h'
+          : 'quad';
+    const activePaneId =
+      tab.activePaneId === paneId ? (remaining[0]?.id ?? tab.activePaneId) : tab.activePaneId;
+    state.writers.delete(paneId);
+    set({
+      tabs: state.tabs.map((t) =>
+        t.id === tabId ? { ...t, panes: remaining, layout, activePaneId } : t,
+      ),
+    });
   },
 }));
 

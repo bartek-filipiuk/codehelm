@@ -1,13 +1,13 @@
 'use client';
 
 import { useTerminalStore } from '@/stores/terminal-slice';
-import { Terminal } from './Terminal';
+import { PaneGrid } from '@/components/terminal/PaneGrid';
 import { cn } from '@/lib/utils';
 
 /**
- * Renders every terminal tab as a mounted Terminal component. Inactive ones
- * stay in the DOM (keeps xterm state + PTY alive) but are invisible and
- * positioned offscreen so addon-fit sees valid dimensions.
+ * Renders every terminal tab as a mounted PaneGrid. Inactive tabs stay in the
+ * DOM (keeps xterm state + PTY alive) but are invisible and positioned
+ * offscreen so addon-fit sees valid dimensions.
  */
 export function TabManager() {
   const tabs = useTerminalStore((s) => s.tabs);
@@ -32,13 +32,7 @@ export function TabManager() {
           className={cn('absolute inset-0', t.id === activeId ? 'visible z-10' : 'invisible z-0')}
           aria-hidden={t.id !== activeId}
         >
-          <Terminal
-            cwd={t.cwd}
-            tabId={t.id}
-            {...(t.shell ? { shell: t.shell } : {})}
-            {...(t.args ? { args: t.args } : {})}
-            {...(t.initCommand ? { initCommand: t.initCommand } : {})}
-          />
+          <PaneGrid tab={t} />
         </div>
       ))}
     </div>
