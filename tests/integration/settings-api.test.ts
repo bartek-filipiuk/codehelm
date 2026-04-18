@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { mkdtempSync, mkdirSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, realpathSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { startServer, type StartedServer } from './helpers/start-server';
 
@@ -9,7 +9,9 @@ let csrfToken = '';
 let fakeHome: string;
 
 beforeAll(async () => {
-  fakeHome = mkdtempSync(`${tmpdir()}/codehelm-settings-api-`);
+  // Pre-resolve tmpdir symlinks (macOS: /var → /private/var) so that fake paths
+  // match what server-side path-guard returns after its own realpath() pass.
+  fakeHome = realpathSync(mkdtempSync(`${tmpdir()}/codehelm-settings-api-`));
   mkdirSync(`${fakeHome}/.codehelm`, { recursive: true });
   server = await startServer({ HOME: fakeHome });
   const res = await fetch(`${server.baseUrl}/api/auth?k=${server.token}`, { redirect: 'manual' });

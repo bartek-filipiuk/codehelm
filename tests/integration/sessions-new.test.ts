@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, realpathSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { startServer, type StartedServer } from './helpers/start-server';
 
@@ -10,7 +10,9 @@ import { startServer, type StartedServer } from './helpers/start-server';
  * that HOME.
  */
 function buildFakeHome() {
-  const home = mkdtempSync(`${tmpdir()}/codehelm-new-session-`);
+  // Pre-resolve tmpdir symlinks (macOS: /var → /private/var) so that fake paths
+  // match what server-side path-guard returns after its own realpath() pass.
+  const home = realpathSync(mkdtempSync(`${tmpdir()}/codehelm-new-session-`));
   const projectDir = `${home}/proj`;
   mkdirSync(projectDir, { recursive: true });
   const slug = projectDir.replace(/\//g, '-');

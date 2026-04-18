@@ -1,11 +1,13 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import WebSocket from 'ws';
-import { appendFileSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { appendFileSync, mkdirSync, mkdtempSync, realpathSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { startServer, type StartedServer } from './helpers/start-server';
 
 function buildFakeHome() {
-  const home = mkdtempSync(`${tmpdir()}/codehelm-watch-`);
+  // Pre-resolve tmpdir symlinks (macOS: /var → /private/var) so that fake paths
+  // match what server-side path-guard returns after its own realpath() pass.
+  const home = realpathSync(mkdtempSync(`${tmpdir()}/codehelm-watch-`));
   mkdirSync(`${home}/.claude/projects`, { recursive: true });
   return home;
 }

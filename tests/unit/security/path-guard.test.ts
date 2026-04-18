@@ -1,10 +1,13 @@
 import { describe, expect, it, beforeAll, afterAll } from 'vitest';
+import { realpathSync } from 'node:fs';
 import { mkdir, writeFile, symlink, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { assertInside } from '@/lib/security/path-guard';
 
-const TMP = join(tmpdir(), `codehelm-path-guard-${Date.now()}`);
+// Pre-resolve tmpdir symlinks (on macOS, /var → /private/var) so that ROOT
+// matches what assertInside returns after its own realpath() pass.
+const TMP = join(realpathSync(tmpdir()), `codehelm-path-guard-${Date.now()}`);
 const ROOT = join(TMP, 'root');
 const OUTSIDE = join(TMP, 'outside');
 
@@ -57,8 +60,11 @@ describe('assertInside — 100-payload fuzz', () => {
     // Absolute paths out
     { name: 'absolute /etc/passwd', input: '/etc/passwd' },
     { name: 'absolute HOME', input: '/root/.ssh/id_rsa' },
-    // Mixed case (a no-op on Linux, but validated anyway)
-    { name: 'CASE root', input: ROOT.toUpperCase() },
+    // Case-sensitivity probe. On case-insensitive filesystems (macOS APFS default)
+    // `ROOT.toUpperCase()` resolves to ROOT itself — legitimate self-root access,
+    // not an escape. Use uppercased-prefix + 'EVIL' to probe prefix collisions on
+    // both case-sensitive (Linux) and case-insensitive (macOS/Windows) hosts.
+    { name: 'CASE prefix collision', input: `${ROOT.toUpperCase()}EVIL/file` },
     // Prefix collision
     { name: 'prefix collision', input: `${ROOT}EVIL/file` },
     { name: 'prefix collision with slash', input: `${ROOT}/../${ROOT.split('/').pop()}EVIL/file` },
