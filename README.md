@@ -14,6 +14,67 @@ treats `127.0.0.1` like the attack surface it actually is.
 
 ---
 
+## Quickstart
+
+Requirements: **Node 20.11+**, **pnpm 9+**, and **Chromium** or **Google Chrome**.
+
+### Linux (primary target — Ubuntu 22.04+ tested)
+
+```bash
+git clone https://github.com/bartek-filipiuk/codehelm.git
+cd codehelm
+pnpm install
+pnpm build      # one-time — without this, codehelm falls back to dev mode (slower)
+./bin/codehelm
+```
+
+A dedicated Chromium window opens on a random ephemeral port with a one-shot
+auth token. Close the window or hit `Ctrl+C` in the terminal to tear everything
+down — PTYs, watcher, and the Chromium profile are cleaned on exit.
+
+Re-run `pnpm build` (or `./bin/codehelm --build`) whenever you pull new
+source changes. Use `./bin/codehelm --dev` if you want HMR and don't mind
+the slower cold start.
+
+### macOS (supported, needs hands-on verification)
+
+The codebase has macOS-aware helpers (`lib/server/platform.ts`) for:
+
+- Chrome discovery at `/Applications/Google Chrome.app/Contents/MacOS/Google Chrome` and `/Applications/Chromium.app/...`
+- `zsh` as the default shell (vs Linux's `bash`)
+- `$TMPDIR` fallback when `$XDG_RUNTIME_DIR` is unset
+
+```bash
+git clone https://github.com/bartek-filipiuk/codehelm.git
+cd codehelm
+pnpm install
+./bin/codehelm
+```
+
+> ⚠ **Not yet verified on macOS hardware.** `@homebridge/node-pty-prebuilt-multiarch`
+> should carry darwin-arm64 / darwin-x64 prebuilds, but this hasn't been smoke-tested
+> end-to-end on an actual Mac. If `pnpm install` triggers `node-gyp` instead of dropping
+> a prebuilt binary, or if the PTY crashes on spawn, please open an issue with the output
+> of `node -e "require('@homebridge/node-pty-prebuilt-multiarch')"` — that's tracked as
+> task T25.
+
+### Windows
+
+Run under **WSL2**. Native Windows shells are intentionally out of scope — no `conpty`
+integration, no `%COMSPEC%` path handling. The WSL flow is identical to the Linux one.
+
+### Installer (optional, one-shot)
+
+`bin/install.ts` verifies OS + Node + pnpm, runs `pnpm install`, triggers a production
+build, and drops a `~/.local/bin/codehelm` symlink:
+
+```bash
+node bin/install.ts --dry-run   # report only, no writes
+node bin/install.ts             # full install + build + symlink
+```
+
+---
+
 ## Screenshots
 
 **Session history. Markdown, tool_use cards, tool_result with diffs, all
@@ -173,32 +234,10 @@ returns zero.
 
 ---
 
-## Quick start
+## How the launcher works
 
-Requirements: Node 20.11+, pnpm 9+, Chromium or Google Chrome. Linux
-is the primary target (Ubuntu 22.04+ tested); macOS is supported via
-the `lib/server/platform.ts` helpers (Chrome.app discovery, zsh
-default, `$TMPDIR` fallback), with the caveat that `node-pty` prebuilt
-binaries for Darwin still need verification on hardware. On Windows,
-run inside WSL — the Windows-native shell is intentionally out of
-scope. The UI ships in English.
-
-```bash
-git clone https://github.com/bartek-filipiuk/codehelm.git
-cd codehelm
-pnpm install
-./bin/codehelm
-```
-
-Or one-shot via the installer (detects OS, verifies Node + pnpm,
-builds, creates `~/.local/bin/codehelm` symlink):
-
-```bash
-node bin/install.ts --dry-run   # report only, no writes
-node bin/install.ts              # full install
-```
-
-The launcher will:
+See the [Quickstart](#quickstart) section above for install steps. The
+`bin/codehelm` launcher itself will:
 
 1. Find a free ephemeral port on `127.0.0.1`.
 2. Generate a 32-byte token.
