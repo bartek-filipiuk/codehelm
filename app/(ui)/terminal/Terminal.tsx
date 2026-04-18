@@ -112,18 +112,44 @@ export function Terminal({ cwd, shell, args, initCommand, paneId }: TerminalProp
       term.loadAddon(links);
       if (!hostRef.current) return;
       term.open(hostRef.current);
+
+      // Register handlers BEFORE the first fit so the initial resize event is
+      // observed. The first onResize after mount is forwarded synchronously —
+      // without debounce — so the PTY's termios never lags behind xterm during
+      // the first render, which is when split panes' final geometry settles
+      // and mismatches would otherwise desync the shell's cursor math.
+      let initialResizeSent = false;
+      term.onData((data) => write(data));
+      term.onResize(({ cols: c, rows: r }) => {
+        if (!initialResizeSent) {
+          initialResizeSent = true;
+          resize(c, r);
+          return;
+        }
+        if (resizeTimeoutRef.current) clearTimeout(resizeTimeoutRef.current);
+        resizeTimeoutRef.current = setTimeout(() => resize(c, r), RESIZE_DEBOUNCE_MS);
+      });
+
       try {
         fit.fit();
       } catch {
         /* ignore */
       }
-      term.onData((data) => write(data));
-      term.onResize(({ cols, rows }) => {
-        if (resizeTimeoutRef.current) clearTimeout(resizeTimeoutRef.current);
-        resizeTimeoutRef.current = setTimeout(() => resize(cols, rows), RESIZE_DEBOUNCE_MS);
-      });
       termRef.current = term;
       fitRef.current = fit;
+
+      // Second fit after the browser has committed the first layout. Split
+      // panes typically receive their final flex-basis here, so this catches
+      // the geometry xterm saw during term.open() as wrong and corrects it
+      // before the user types anything.
+      requestAnimationFrame(() => {
+        if (disposed) return;
+        try {
+          fit.fit();
+        } catch {
+          /* ignore */
+        }
+      });
 
       const cols = term.cols;
       const rows = term.rows;

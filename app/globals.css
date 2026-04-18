@@ -1450,7 +1450,13 @@
 .term-body {
   flex: 1;
   background: #070707;
-  padding: 12px 16px;
+  /* No padding: FitAddon measures this as xterm's parent but only subtracts
+     padding from the xterm element itself (which has none), so any padding
+     here makes xterm.cols/rows exceed the real drawable area and the shell
+     termios desynchronises from what xterm renders — shows up as
+     cursor-overwrite on long lines, worst in vertical split panes where the
+     scrollbar eats extra pixels. Use .term-wrap or .term-head for margin. */
+  padding: 0;
   font-family: var(--font-jetbrains), monospace;
   font-size: 13px;
   line-height: 1.55;
