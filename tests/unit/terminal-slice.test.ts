@@ -1,8 +1,11 @@
+// @vitest-environment jsdom
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useTerminalStore, TERMINAL_TAB_CAP } from '@/stores/terminal-slice';
+import { getTabAlias } from '@/lib/ui/tab-aliases';
 
 beforeEach(() => {
   useTerminalStore.getState().clear();
+  if (typeof window !== 'undefined') window.localStorage.clear();
 });
 
 describe('terminal-slice', () => {
@@ -50,5 +53,75 @@ describe('terminal-slice', () => {
     const a = s.openTab({ cwd: '/a', title: 'a' })!;
     useTerminalStore.getState().setActive('nope');
     expect(useTerminalStore.getState().activeTabId).toBe(a);
+  });
+
+  describe('renameTab', () => {
+    it('updates the title of an existing tab', () => {
+      const id = useTerminalStore.getState().openTab({ cwd: '/a', title: 'original' })!;
+      useTerminalStore.getState().renameTab(id, 'my alias');
+      expect(useTerminalStore.getState().tabs.find((t) => t.id === id)?.title).toBe('my alias');
+    });
+
+    it('trims whitespace and rejects empty-after-trim input', () => {
+      const id = useTerminalStore.getState().openTab({ cwd: '/a', title: 'original' })!;
+      useTerminalStore.getState().renameTab(id, '  spaced  ');
+      expect(useTerminalStore.getState().tabs.find((t) => t.id === id)?.title).toBe('spaced');
+
+      useTerminalStore.getState().renameTab(id, '   ');
+      expect(useTerminalStore.getState().tabs.find((t) => t.id === id)?.title).toBe('spaced');
+    });
+
+    it('caps at the 40-char limit', () => {
+      const id = useTerminalStore.getState().openTab({ cwd: '/a', title: 'original' })!;
+      const huge = 'x'.repeat(100);
+      useTerminalStore.getState().renameTab(id, huge);
+      const after = useTerminalStore.getState().tabs.find((t) => t.id === id)?.title ?? '';
+      expect(after.length).toBe(40);
+    });
+
+    it('is a no-op for unknown ids', () => {
+      const id = useTerminalStore.getState().openTab({ cwd: '/a', title: 'original' })!;
+      useTerminalStore.getState().renameTab('nope', 'other');
+      expect(useTerminalStore.getState().tabs.find((t) => t.id === id)?.title).toBe('original');
+    });
+
+    it('persists rename to localStorage when aliasKey is present', () => {
+      const id = useTerminalStore
+        .getState()
+        .openTab({ cwd: '/a', title: 'generic', aliasKey: 'resume:abc' })!;
+      useTerminalStore.getState().renameTab(id, 'my tab');
+      expect(getTabAlias('resume:abc')).toBe('my tab');
+    });
+
+    it('does NOT persist rename when aliasKey is absent', () => {
+      const id = useTerminalStore.getState().openTab({ cwd: '/a', title: 'generic' })!;
+      useTerminalStore.getState().renameTab(id, 'my tab');
+      expect(getTabAlias('resume:abc')).toBeNull();
+      // store still updates the in-memory title
+      expect(useTerminalStore.getState().tabs.find((t) => t.id === id)?.title).toBe('my tab');
+    });
+  });
+
+  describe('openTab alias hydration', () => {
+    it('applies a stored alias when the key matches', () => {
+      // Pre-seed as if a previous session wrote this.
+      window.localStorage.setItem(
+        'codehelm:tab-aliases',
+        JSON.stringify({ 'resume:abc': 'saved alias' }),
+      );
+      const id = useTerminalStore
+        .getState()
+        .openTab({ cwd: '/a', title: 'default title', aliasKey: 'resume:abc' })!;
+      expect(useTerminalStore.getState().tabs.find((t) => t.id === id)?.title).toBe('saved alias');
+    });
+
+    it('falls back to cfg.title when no alias is stored', () => {
+      const id = useTerminalStore
+        .getState()
+        .openTab({ cwd: '/a', title: 'default title', aliasKey: 'resume:xyz' })!;
+      expect(useTerminalStore.getState().tabs.find((t) => t.id === id)?.title).toBe(
+        'default title',
+      );
+    });
   });
 });

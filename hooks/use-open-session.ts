@@ -62,6 +62,9 @@ export function useOpenSession() {
         cwd: data.cwd,
         initCommand,
         title: data.title,
+        aliasKey: vars.resumeSessionId
+          ? `resume:${vars.resumeSessionId}`
+          : `shell:${vars.slug}:${data.cwd}`,
       });
       openTerminalView(data.cwd);
     },

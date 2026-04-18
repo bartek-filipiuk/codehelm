@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { getTabAlias, patchTabAlias } from '@/lib/ui/tab-aliases';
 
 export interface TerminalTab {
   id: string;
@@ -10,6 +11,12 @@ export interface TerminalTab {
   initCommand?: string;
   title: string;
   createdAt: number;
+  /**
+   * Stable key used to persist a rename across app restarts.
+   * Examples: `resume:<sessionId>` for resume tabs, `shell:<slug>:<cwd>` for
+   * plain shells. Absent for ad-hoc tabs (no persistence).
+   */
+  aliasKey?: string;
 }
 
 export interface TerminalCfg {
@@ -19,9 +26,13 @@ export interface TerminalCfg {
   args?: string[];
   initCommand?: string;
   title: string;
+  aliasKey?: string;
 }
 
 const MAX_TABS = 16;
+const TAB_TITLE_MAX_LEN = 40;
+
+export const TERMINAL_TAB_TITLE_MAX_LEN = TAB_TITLE_MAX_LEN;
 
 interface State {
   tabs: TerminalTab[];
@@ -38,6 +49,7 @@ interface State {
   openTab: (cfg: TerminalCfg) => string | null;
   closeTab: (id: string) => void;
   setActive: (id: string) => void;
+  renameTab: (id: string, title: string) => void;
   clear: () => void;
   registerWriter: (id: string, writer: (data: string) => void) => void;
   unregisterWriter: (id: string) => void;
@@ -53,6 +65,7 @@ export const useTerminalStore = create<State>((set, get) => ({
     const { tabs, _seq } = get();
     if (tabs.length >= MAX_TABS) return null;
     const id = `t-${Date.now()}-${_seq + 1}`;
+    const savedAlias = getTabAlias(cfg.aliasKey);
     const tab: TerminalTab = {
       id,
       projectSlug: cfg.projectSlug ?? null,
@@ -60,8 +73,9 @@ export const useTerminalStore = create<State>((set, get) => ({
       ...(cfg.shell !== undefined ? { shell: cfg.shell } : {}),
       ...(cfg.args !== undefined ? { args: cfg.args } : {}),
       ...(cfg.initCommand !== undefined ? { initCommand: cfg.initCommand } : {}),
-      title: cfg.title,
+      title: savedAlias ?? cfg.title,
       createdAt: Date.now(),
+      ...(cfg.aliasKey ? { aliasKey: cfg.aliasKey } : {}),
     };
     set({ tabs: [...tabs, tab], activeTabId: id, _seq: _seq + 1 });
     return id;
@@ -80,6 +94,15 @@ export const useTerminalStore = create<State>((set, get) => ({
   },
   setActive: (id) => {
     if (get().tabs.some((t) => t.id === id)) set({ activeTabId: id });
+  },
+  renameTab: (id, title) => {
+    const trimmed = title.trim().slice(0, TAB_TITLE_MAX_LEN);
+    if (!trimmed) return;
+    const { tabs } = get();
+    const tab = tabs.find((t) => t.id === id);
+    if (!tab) return;
+    set({ tabs: tabs.map((t) => (t.id === id ? { ...t, title: trimmed } : t)) });
+    if (tab.aliasKey) patchTabAlias(tab.aliasKey, trimmed);
   },
   clear: () => set({ tabs: [], activeTabId: null }),
   registerWriter: (id, writer) => {

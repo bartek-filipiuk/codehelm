@@ -43,6 +43,7 @@ export function MainPanel() {
       projectSlug: activeProject.slug,
       cwd: activeProject.resolvedCwd,
       title: `shell (${activeProject.slug.slice(-24)})`,
+      aliasKey: `shell:${activeProject.slug}:${activeProject.resolvedCwd}`,
     });
     if (id) openTerminal(activeProject.resolvedCwd);
   };

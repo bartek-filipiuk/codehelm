@@ -115,6 +115,7 @@ export function CommandPalette() {
       projectSlug: activeProject.slug,
       cwd: activeProject.resolvedCwd,
       title: `shell (${activeProject.slug.slice(-24)})`,
+      aliasKey: `shell:${activeProject.slug}:${activeProject.resolvedCwd}`,
     });
     if (id) openTerminal(activeProject.resolvedCwd);
     setOpen(false);
