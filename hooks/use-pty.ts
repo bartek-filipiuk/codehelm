@@ -8,6 +8,7 @@ export interface PtyEvents {
   onData?: (chunk: string) => void;
   onExit?: (info: { exitCode: number; signal?: number }) => void;
   onStatus?: (status: PtyStatus) => void;
+  onError?: (code: string) => void;
 }
 
 export type PtyStatus = 'connecting' | 'ready' | 'closed' | 'error';
@@ -109,6 +110,12 @@ export function usePty(events: PtyEvents) {
           const sig = typeof msg['signal'] === 'number' ? (msg['signal'] as number) : undefined;
           eventsRef.current.onExit?.({ exitCode, ...(sig !== undefined ? { signal: sig } : {}) });
         } else if (msg['type'] === 'error') {
+          const code = typeof msg['code'] === 'string' ? msg['code'] : 'unknown';
+          // Log to console so devtools show why we failed without having to
+          // sniff raw WS frames. Also forwards to onError for UI surfacing.
+          // eslint-disable-next-line no-console
+          console.warn(`[pty] server error: ${code}`);
+          eventsRef.current.onError?.(code);
           setAndEmit('error');
         }
       };

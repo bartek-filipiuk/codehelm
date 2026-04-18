@@ -92,6 +92,9 @@ export function Terminal({
     onExit: ({ exitCode }) => {
       termRef.current?.write(`\r\n\x1b[33m[exit ${exitCode}]\x1b[0m\r\n`);
     },
+    onError: (code) => {
+      termRef.current?.write(`\r\n\x1b[31m[pty error: ${code}]\x1b[0m\r\n`);
+    },
     onStatus: (s) => {
       setStatus(s);
       // initCommand is only typed client-side for ephemeral (non-persistent)
