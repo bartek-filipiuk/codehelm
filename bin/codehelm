@@ -137,7 +137,86 @@ function waitForHealth(port, attempts = 100, intervalMs = 100) {
   });
 }
 
+const CLI_FLAGS = process.argv.slice(2);
+const FORCE_DEV = CLI_FLAGS.includes('--dev');
+const FORCE_BUILD = CLI_FLAGS.includes('--build');
+const WANT_HELP = CLI_FLAGS.includes('--help') || CLI_FLAGS.includes('-h');
+
+function printHelp() {
+  console.log(`codehelm — local Claude Code session manager
+
+Usage:
+  codehelm [--dev] [--build] [--help]
+
+Flags:
+  --dev      Run Next.js in development mode (HMR, slower cold start).
+             Default is production when a build is present under .next/.
+  --build    Run \`pnpm build\` before starting (picks up source changes).
+  --help     Show this message.
+
+Environment:
+  CODEHELM_CHROMIUM   Override Chromium/Chrome path auto-detection.
+  LOG_LEVEL           pino log level (default: info).`);
+}
+
+function runBuildStep() {
+  return new Promise((res, rej) => {
+    const p = spawn('pnpm', ['build'], { cwd: ROOT, stdio: 'inherit' });
+    p.on('exit', (code) => {
+      if (code === 0) res();
+      else rej(new Error(`pnpm build failed (exit ${code ?? 'null'})`));
+    });
+  });
+}
+
+function prewarmEndpoints(port, token) {
+  // Fire-and-forget fetches to trigger lazy module loads on the server
+  // (JSONL parser, watcher subscribers, settings IO). Ignored on failure.
+  const paths = ['/api/projects', '/api/settings'];
+  for (const path of paths) {
+    const req = request(
+      {
+        host: '127.0.0.1',
+        port,
+        path,
+        method: 'GET',
+        headers: { cookie: `codehelm_auth=${token}` },
+      },
+      (res) => res.resume(),
+    );
+    req.once('error', () => {});
+    req.setTimeout(2000, () => req.destroy());
+    req.end();
+  }
+}
+
 async function main() {
+  if (WANT_HELP) {
+    printHelp();
+    process.exit(0);
+  }
+
+  // Build mode decision. Priority: --dev wins, then --build forces a rebuild,
+  // otherwise we use prod when .next/BUILD_ID exists and fall back to dev with
+  // a warning if it doesn't.
+  const buildIdPath = resolve(ROOT, '.next/BUILD_ID');
+  if (FORCE_BUILD && !FORCE_DEV) {
+    console.error('codehelm: rebuilding (--build)…');
+    await runBuildStep();
+  }
+  const hasBuild = existsSync(buildIdPath);
+  const useProd = !FORCE_DEV && hasBuild;
+  if (!useProd && !FORCE_DEV) {
+    console.error(
+      'codehelm: no production build found (.next/BUILD_ID missing). Falling back to dev mode.',
+    );
+    console.error('         Run `pnpm build` (or `bin/codehelm --build`) once for ~5-10× faster starts.');
+  } else if (useProd) {
+    console.error('codehelm: using production build.');
+  } else {
+    console.error('codehelm: dev mode forced (--dev).');
+  }
+
   const port = await findPort();
   const token = randomBytes(32).toString('hex');
 
@@ -146,11 +225,15 @@ async function main() {
     PORT: String(port),
     CODEHELM_TOKEN: token,
     HOST: '127.0.0.1',
+    NODE_ENV: useProd ? 'production' : 'development',
   };
 
-  const isDev = process.env['NODE_ENV'] !== 'production';
-  const cmd = isDev ? 'pnpm' : 'node';
-  const args = isDev ? ['exec', 'tsx', 'server.ts'] : ['server.js'];
+  // Our custom server.ts always runs through tsx — in prod, Next detects
+  // NODE_ENV and serves the pre-built .next/ tree (no on-demand compile,
+  // React in prod mode, minified bundle). The tsx wrap costs ~150 ms at
+  // startup, trivial vs the savings.
+  const cmd = 'pnpm';
+  const args = ['exec', 'tsx', 'server.ts'];
 
   const server = spawn(cmd, args, {
     cwd: ROOT,
@@ -196,6 +279,9 @@ async function main() {
     return;
   }
 
+  // Prewarm lazy server-side modules while Chromium starts.
+  prewarmEndpoints(port, token);
+
   const chromium = findChromium();
   const url = `http://127.0.0.1:${port}/api/auth?k=${token}`;
   chromeProc = spawn(
@@ -205,7 +291,16 @@ async function main() {
       `--user-data-dir=${profileDir}`,
       '--no-first-run',
       '--no-default-browser-check',
-      '--disable-features=TranslateUI',
+      // Perf flags: strip the things a local dev tool will never use.
+      '--disable-extensions',
+      '--disable-background-networking',
+      '--disable-sync',
+      '--disable-default-apps',
+      '--no-pings',
+      '--metrics-recording-only',
+      '--disable-features=TranslateUI,OptimizationHints,InterestFeedContentSuggestions',
+      // Persist static-asset cache across launches under our profile dir.
+      '--disk-cache-size=104857600',
     ],
     { stdio: 'ignore', detached: false },
   );
