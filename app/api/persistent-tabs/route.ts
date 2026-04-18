@@ -13,6 +13,8 @@ const CreateBody = z.object({
   args: z.array(z.string()).max(32).optional(),
   initCommand: z.string().max(2048).optional(),
   cronTag: z.string().regex(CRON_TAG_RE).optional(),
+  projectSlug: z.string().max(256).optional(),
+  aliasKey: z.string().max(256).optional(),
 });
 
 export async function GET(): Promise<NextResponse> {

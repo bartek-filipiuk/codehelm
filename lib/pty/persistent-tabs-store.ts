@@ -14,6 +14,11 @@ export const PersistentTabSchema = z.object({
   args: z.array(z.string()).max(32).optional(),
   initCommand: z.string().max(2048).optional(),
   cronTag: z.string().regex(CRON_TAG_RE).optional(),
+  /** Project slug used by the UI to group tabs. No validation here — stays
+   * user-opaque. */
+  projectSlug: z.string().max(256).optional(),
+  /** Stable UI alias key (e.g. `resume:<sessionId>`, `shell:<slug>:<cwd>`). */
+  aliasKey: z.string().max(256).optional(),
   createdAt: z.number().int().nonnegative(),
   updatedAt: z.number().int().nonnegative(),
 });
@@ -76,6 +81,8 @@ export interface CreatePersistentTabInput {
   args?: string[] | undefined;
   initCommand?: string | undefined;
   cronTag?: string | undefined;
+  projectSlug?: string | undefined;
+  aliasKey?: string | undefined;
 }
 
 export async function create(input: CreatePersistentTabInput): Promise<PersistentTab> {
@@ -93,6 +100,8 @@ export async function create(input: CreatePersistentTabInput): Promise<Persisten
       ...(input.args !== undefined ? { args: input.args } : {}),
       ...(input.initCommand !== undefined ? { initCommand: input.initCommand } : {}),
       ...(input.cronTag !== undefined ? { cronTag: input.cronTag } : {}),
+      ...(input.projectSlug !== undefined ? { projectSlug: input.projectSlug } : {}),
+      ...(input.aliasKey !== undefined ? { aliasKey: input.aliasKey } : {}),
       createdAt: now,
       updatedAt: now,
     };

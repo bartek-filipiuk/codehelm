@@ -7,6 +7,7 @@ import { usePty, type PtyStatus } from '@/hooks/use-pty';
 import { useSettings } from '@/hooks/use-settings';
 import { useTerminalStore } from '@/stores/terminal-slice';
 import { toastInfo } from '@/lib/ui/toast';
+import { registerPersistentTab } from '@/lib/ui/persistent-tab-sync';
 
 export interface TerminalProps {
   cwd: string;
@@ -27,6 +28,14 @@ export interface TerminalProps {
    * survives tab close and browser reload; cron jobs can write to it.
    */
   persistentId?: string;
+  /** Owning tab id — used to upgrade the pane to persistent on mount. */
+  tabId?: string;
+  /** Tab title — stored server-side so reload restores the label. */
+  title?: string;
+  /** Project slug owning this tab — lets reload group tabs under projects. */
+  projectSlug?: string | null;
+  /** Stable alias key (e.g. `resume:<id>`) persisted for reload. */
+  aliasKey?: string;
 }
 
 const RESIZE_DEBOUNCE_MS = 100;
@@ -38,9 +47,14 @@ export function Terminal({
   initCommand,
   paneId,
   persistentId,
+  tabId,
+  title,
+  projectSlug,
+  aliasKey,
 }: TerminalProps) {
   const registerWriter = useTerminalStore((s) => s.registerWriter);
   const unregisterWriter = useTerminalStore((s) => s.unregisterWriter);
+  const setPanePersistentId = useTerminalStore((s) => s.setPanePersistentId);
   const [gitStatus, setGitStatus] = useState<{ branch: string | null; dirty: boolean } | null>(
     null,
   );
@@ -72,6 +86,7 @@ export function Terminal({
   const [status, setStatus] = useState<PtyStatus>('closed');
   const { data: settings } = useSettings();
   const fontSize = settings?.terminalFontSize ?? 13;
+  const attachedServerSideRef = useRef<boolean>(Boolean(persistentId));
   const { connect, write, resize, close } = usePty({
     onData: (chunk) => termRef.current?.write(chunk),
     onExit: ({ exitCode }) => {
@@ -79,10 +94,16 @@ export function Terminal({
     },
     onStatus: (s) => {
       setStatus(s);
-      // Type the init command once, the first time the PTY is ready.
-      if (s === 'ready' && initCommand && !initSentRef.current) {
+      // initCommand is only typed client-side for ephemeral (non-persistent)
+      // PTYs. Persistent PTYs run initCommand server-side at spawn time, so
+      // re-sending here would double-type it on every attach.
+      if (
+        s === 'ready' &&
+        initCommand &&
+        !initSentRef.current &&
+        !attachedServerSideRef.current
+      ) {
         initSentRef.current = true;
-        // Small delay so the shell's prompt renders before typing.
         setTimeout(() => write(`${initCommand}\r`), 80);
       }
     },
@@ -163,6 +184,28 @@ export function Terminal({
         }
       });
 
+      // Upgrade the pane to a persistent PTY if it isn't one already. The PTY
+      // then survives WS close (tab switch, browser reload) and dies only on
+      // explicit close (X button → DELETE /api/persistent-tabs/:id).
+      let effectivePersistentId = persistentId;
+      if (!effectivePersistentId) {
+        const reg = await registerPersistentTab({
+          title: title ?? cwd,
+          cwd,
+          ...(shell ? { shell } : {}),
+          ...(initCommand ? { initCommand } : {}),
+          ...(projectSlug ? { projectSlug } : {}),
+          ...(aliasKey ? { aliasKey } : {}),
+        });
+        if (!disposed && reg) {
+          effectivePersistentId = reg.persistentId;
+          attachedServerSideRef.current = true;
+          if (tabId && paneId) {
+            setPanePersistentId(tabId, paneId, reg.persistentId);
+          }
+        }
+      }
+
       const cols = term.cols;
       const rows = term.rows;
       connect({
@@ -171,7 +214,7 @@ export function Terminal({
         rows,
         ...(shell ? { shell } : {}),
         ...(args ? { args } : {}),
-        ...(persistentId ? { persistentId } : {}),
+        ...(effectivePersistentId ? { persistentId: effectivePersistentId } : {}),
       });
     })();
     return () => {

@@ -1,5 +1,9 @@
 import { create } from 'zustand';
 import { getTabAlias, patchTabAlias } from '@/lib/ui/tab-aliases';
+import {
+  deletePersistentTab,
+  type ServerPersistentTab,
+} from '@/lib/ui/persistent-tab-sync';
 
 export type TerminalLayout = 'single' | 'h' | 'v' | 'quad';
 
@@ -75,6 +79,11 @@ interface State {
   setActivePane: (tabId: string, paneId: string) => void;
   closePane: (tabId: string, paneId: string) => void;
   sendToActivePane: (data: string) => boolean;
+  /** Attach a server-side persistent PTY id to an already-open pane. */
+  setPanePersistentId: (tabId: string, paneId: string, persistentId: string) => void;
+  /** Merge server-side persistent tabs into the store, adding any that are not
+   * yet represented. Does not disturb existing tabs. */
+  hydrate: (tabs: ServerPersistentTab[]) => void;
 }
 
 export const useTerminalStore = create<State>((set, get) => ({
@@ -118,6 +127,7 @@ export const useTerminalStore = create<State>((set, get) => ({
     const { tabs, activeTabId } = get();
     const idx = tabs.findIndex((t) => t.id === id);
     if (idx === -1) return;
+    const closing = tabs[idx];
     const next = tabs.filter((t) => t.id !== id);
     let nextActive = activeTabId;
     if (activeTabId === id) {
@@ -125,6 +135,13 @@ export const useTerminalStore = create<State>((set, get) => ({
       nextActive = neighbour?.id ?? null;
     }
     set({ tabs: next, activeTabId: nextActive });
+    // Explicit close = kill the PTY on the server side for every persistent
+    // pane belonging to this tab. Fire-and-forget; the UI is already updated.
+    if (closing) {
+      for (const pane of closing.panes) {
+        if (pane.persistentId) deletePersistentTab(pane.persistentId);
+      }
+    }
   },
   setActive: (id) => {
     if (get().tabs.some((t) => t.id === id)) set({ activeTabId: id });
@@ -205,6 +222,7 @@ export const useTerminalStore = create<State>((set, get) => ({
     const state = get();
     const tab = state.tabs.find((t) => t.id === tabId);
     if (!tab) return;
+    const closingPane = tab.panes.find((p) => p.id === paneId);
     const remaining = tab.panes.filter((p) => p.id !== paneId);
     if (remaining.length === 0) {
       get().closeTab(tabId);
@@ -226,6 +244,68 @@ export const useTerminalStore = create<State>((set, get) => ({
         t.id === tabId ? { ...t, panes: remaining, layout, activePaneId } : t,
       ),
     });
+    if (closingPane?.persistentId) deletePersistentTab(closingPane.persistentId);
+  },
+  setPanePersistentId: (tabId, paneId, persistentId) => {
+    set((state) => ({
+      tabs: state.tabs.map((t) =>
+        t.id !== tabId
+          ? t
+          : {
+              ...t,
+              panes: t.panes.map((p) =>
+                p.id === paneId ? { ...p, persistentId } : p,
+              ),
+            },
+      ),
+    }));
+  },
+  hydrate: (serverTabs) => {
+    if (!serverTabs.length) return;
+    const state = get();
+    const knownPersistentIds = new Set<string>();
+    for (const t of state.tabs) {
+      for (const p of t.panes) {
+        if (p.persistentId) knownPersistentIds.add(p.persistentId);
+      }
+    }
+    const toAdd = serverTabs.filter((t) => !knownPersistentIds.has(t.persistentId));
+    if (toAdd.length === 0) return;
+    const cap = Math.max(0, MAX_TABS - state.tabs.length);
+    const take = toAdd.slice(0, cap);
+    let seq = state._seq;
+    const now = Date.now();
+    const newTabs: TerminalTab[] = take.map((s) => {
+      seq += 1;
+      const tabId = `t-${now}-${seq}-h`;
+      const paneId = `p-${now}-${seq}-h`;
+      const savedAlias = getTabAlias(s.aliasKey ?? undefined);
+      const pane: TerminalPane = {
+        id: paneId,
+        cwd: s.cwd,
+        ...(s.shell !== undefined ? { shell: s.shell } : {}),
+        ...(s.args !== undefined ? { args: s.args } : {}),
+        persistentId: s.persistentId,
+      };
+      return {
+        id: tabId,
+        projectSlug: s.projectSlug ?? null,
+        cwd: s.cwd,
+        ...(s.shell !== undefined ? { shell: s.shell } : {}),
+        ...(s.args !== undefined ? { args: s.args } : {}),
+        title: savedAlias ?? s.title,
+        createdAt: s.createdAt,
+        ...(s.aliasKey ? { aliasKey: s.aliasKey } : {}),
+        layout: 'single' as TerminalLayout,
+        panes: [pane],
+        activePaneId: paneId,
+      };
+    });
+    set((curr) => ({
+      _seq: seq,
+      tabs: [...curr.tabs, ...newTabs],
+      activeTabId: curr.activeTabId ?? newTabs[0]?.id ?? null,
+    }));
   },
 }));
 

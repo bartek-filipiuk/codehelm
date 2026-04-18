@@ -36,10 +36,14 @@ function PaneSlot({ tab, paneId }: { tab: TerminalTab; paneId: string }) {
       <Terminal
         cwd={pane.cwd}
         paneId={paneId}
+        tabId={tab.id}
+        title={tab.title}
+        projectSlug={tab.projectSlug}
         {...(pane.shell ? { shell: pane.shell } : {})}
         {...(pane.args ? { args: pane.args } : {})}
         {...(pane.initCommand ? { initCommand: pane.initCommand } : {})}
         {...(pane.persistentId ? { persistentId: pane.persistentId } : {})}
+        {...(tab.aliasKey ? { aliasKey: tab.aliasKey } : {})}
       />
       {showClose && (
         <button
