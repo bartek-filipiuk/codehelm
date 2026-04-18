@@ -10,6 +10,11 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   typedRoutes: true,
+  // Keep native-binding packages out of webpack's static bundle; Next will
+  // use runtime require() for them in server code. Without this, webpack
+  // tries to resolve node-pty's prebuilt `pty.node` at build-time from the
+  // route graph (e.g. /api/persistent-tabs) and fails.
+  serverExternalPackages: ['@homebridge/node-pty-prebuilt-multiarch', 'chokidar'],
   async headers() {
     return [
       {
