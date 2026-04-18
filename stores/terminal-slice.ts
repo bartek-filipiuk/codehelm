@@ -1,6 +1,16 @@
 import { create } from 'zustand';
 import { getTabAlias, patchTabAlias } from '@/lib/ui/tab-aliases';
 
+export type TerminalLayout = 'single' | 'h' | 'v' | 'quad';
+
+export interface TerminalPane {
+  id: string;
+  cwd: string;
+  shell?: string;
+  args?: string[];
+  initCommand?: string;
+}
+
 export interface TerminalTab {
   id: string;
   projectSlug: string | null;
@@ -17,6 +27,9 @@ export interface TerminalTab {
    * plain shells. Absent for ad-hoc tabs (no persistence).
    */
   aliasKey?: string;
+  layout: TerminalLayout;
+  panes: TerminalPane[];
+  activePaneId: string;
 }
 
 export interface TerminalCfg {
@@ -64,8 +77,17 @@ export const useTerminalStore = create<State>((set, get) => ({
   openTab: (cfg) => {
     const { tabs, _seq } = get();
     if (tabs.length >= MAX_TABS) return null;
-    const id = `t-${Date.now()}-${_seq + 1}`;
+    const nextSeq = _seq + 1;
+    const id = `t-${Date.now()}-${nextSeq}`;
+    const paneId = `p-${Date.now()}-${nextSeq}`;
     const savedAlias = getTabAlias(cfg.aliasKey);
+    const pane: TerminalPane = {
+      id: paneId,
+      cwd: cfg.cwd,
+      ...(cfg.shell !== undefined ? { shell: cfg.shell } : {}),
+      ...(cfg.args !== undefined ? { args: cfg.args } : {}),
+      ...(cfg.initCommand !== undefined ? { initCommand: cfg.initCommand } : {}),
+    };
     const tab: TerminalTab = {
       id,
       projectSlug: cfg.projectSlug ?? null,
@@ -76,8 +98,11 @@ export const useTerminalStore = create<State>((set, get) => ({
       title: savedAlias ?? cfg.title,
       createdAt: Date.now(),
       ...(cfg.aliasKey ? { aliasKey: cfg.aliasKey } : {}),
+      layout: 'single',
+      panes: [pane],
+      activePaneId: paneId,
     };
-    set({ tabs: [...tabs, tab], activeTabId: id, _seq: _seq + 1 });
+    set({ tabs: [...tabs, tab], activeTabId: id, _seq: nextSeq });
     return id;
   },
   closeTab: (id) => {

@@ -17,6 +17,20 @@ describe('terminal-slice', () => {
     expect(s.activeTabId).toBe(id);
   });
 
+  it('openTab initializes layout="single" with one pane holding shell config', () => {
+    const id = useTerminalStore.getState().openTab({
+      cwd: '/tmp/a',
+      title: 'a',
+      initCommand: 'echo hi',
+    })!;
+    const tab = useTerminalStore.getState().tabs.find((t) => t.id === id)!;
+    expect(tab.layout).toBe('single');
+    expect(tab.panes).toHaveLength(1);
+    expect(tab.panes[0].cwd).toBe('/tmp/a');
+    expect(tab.panes[0].initCommand).toBe('echo hi');
+    expect(tab.activePaneId).toBe(tab.panes[0].id);
+  });
+
   it('caps at 16 tabs — the 17th returns null', () => {
     const s = useTerminalStore.getState();
     for (let i = 0; i < TERMINAL_TAB_CAP; i++) {
