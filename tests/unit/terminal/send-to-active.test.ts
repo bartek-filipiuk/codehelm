@@ -1,5 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { useTerminalStore } from '@/stores/terminal-slice';
+import { useTerminalStore, type TerminalTab } from '@/stores/terminal-slice';
+
+function makeTab(id: string, paneId: string): TerminalTab {
+  return {
+    id,
+    projectSlug: null,
+    cwd: '/',
+    title: id,
+    createdAt: 0,
+    layout: 'single',
+    panes: [{ id: paneId, cwd: '/' }],
+    activePaneId: paneId,
+  };
+}
 
 beforeEach(() => {
   // Fresh store per test — Zustand stores are module singletons.
@@ -17,17 +30,22 @@ describe('terminal writer registry', () => {
     expect(sendToActive('hi\r')).toBe(false);
   });
 
-  it('sendToActive returns false when no writer is registered for the active tab', () => {
-    useTerminalStore.setState({ activeTabId: 't-1' });
+  it('sendToActive returns false when no writer is registered for the active pane', () => {
+    useTerminalStore.setState({
+      tabs: [makeTab('t-1', 'p-1')],
+      activeTabId: 't-1',
+    });
     const { sendToActive } = useTerminalStore.getState();
     expect(sendToActive('hi\r')).toBe(false);
   });
 
-  it('registerWriter makes sendToActive deliver to the matching tab', () => {
+  it('registerWriter makes sendToActive deliver to the active pane', () => {
     const writer = vi.fn();
-    const s = useTerminalStore.getState();
-    s.registerWriter('t-1', writer);
-    useTerminalStore.setState({ activeTabId: 't-1' });
+    useTerminalStore.setState({
+      tabs: [makeTab('t-1', 'p-1')],
+      activeTabId: 't-1',
+    });
+    useTerminalStore.getState().registerWriter('p-1', writer);
     const ok = useTerminalStore.getState().sendToActive('git status\r');
     expect(ok).toBe(true);
     expect(writer).toHaveBeenCalledWith('git status\r');
@@ -36,10 +54,13 @@ describe('terminal writer registry', () => {
   it('sends only to the active tab, not all registered ones', () => {
     const w1 = vi.fn();
     const w2 = vi.fn();
+    useTerminalStore.setState({
+      tabs: [makeTab('t-1', 'p-1'), makeTab('t-2', 'p-2')],
+      activeTabId: 't-2',
+    });
     const s = useTerminalStore.getState();
-    s.registerWriter('t-1', w1);
-    s.registerWriter('t-2', w2);
-    useTerminalStore.setState({ activeTabId: 't-2' });
+    s.registerWriter('p-1', w1);
+    s.registerWriter('p-2', w2);
     useTerminalStore.getState().sendToActive('hi\r');
     expect(w1).not.toHaveBeenCalled();
     expect(w2).toHaveBeenCalledTimes(1);
@@ -47,10 +68,13 @@ describe('terminal writer registry', () => {
 
   it('unregisterWriter stops subsequent sends', () => {
     const writer = vi.fn();
+    useTerminalStore.setState({
+      tabs: [makeTab('t-1', 'p-1')],
+      activeTabId: 't-1',
+    });
     const s = useTerminalStore.getState();
-    s.registerWriter('t-1', writer);
-    useTerminalStore.setState({ activeTabId: 't-1' });
-    s.unregisterWriter('t-1');
+    s.registerWriter('p-1', writer);
+    s.unregisterWriter('p-1');
     expect(useTerminalStore.getState().sendToActive('hi\r')).toBe(false);
     expect(writer).not.toHaveBeenCalled();
   });
