@@ -17,10 +17,20 @@ class PersistentTabsRegistry {
       ptyId,
       spawnedAt: Date.now(),
     });
+    logger.info(
+      { persistentId: tab.persistentId, ptyId, size: this.byPersistentId.size },
+      'persistent_tab_registered',
+    );
   }
 
   unregister(persistentId: string): void {
-    this.byPersistentId.delete(persistentId);
+    const had = this.byPersistentId.delete(persistentId);
+    if (had) {
+      logger.info(
+        { persistentId, size: this.byPersistentId.size },
+        'persistent_tab_unregistered',
+      );
+    }
   }
 
   getPtyId(persistentId: string): string | null {

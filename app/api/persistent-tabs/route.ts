@@ -34,13 +34,21 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
   try {
     const result = await createPersistentTab(parsed.data);
+    logger.info(
+      {
+        persistentId: result.tab.persistentId,
+        ptyId: result.ptyId,
+        cwd: result.tab.cwd,
+      },
+      'persistent_tab_created',
+    );
     return NextResponse.json({ tab: result.tab, ptyId: result.ptyId }, { status: 201 });
   } catch (err) {
     const msg = (err as Error).message;
     if (msg === 'cron_tag_taken') {
       return NextResponse.json({ error: 'cron_tag_taken' }, { status: 409 });
     }
-    logger.error({ err: msg }, 'persistent_tab_create_failed');
+    logger.error({ err: msg, input: parsed.data }, 'persistent_tab_create_failed');
     return NextResponse.json({ error: 'internal', detail: msg }, { status: 500 });
   }
 }

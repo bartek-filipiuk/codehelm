@@ -169,11 +169,22 @@ export function attachPtyChannel(ws: WebSocket, csrfCookieValue: string): void {
       }
       const entry = persistentTabsRegistry.getEntry(msg.persistentId);
       if (!entry) {
+        logger.warn(
+          {
+            persistentId: msg.persistentId,
+            known: persistentTabsRegistry.list().map((e) => e.tab.persistentId),
+          },
+          'attach_persistent_not_found',
+        );
         send(ws, { type: 'error', code: 'persistent_not_found' });
         return;
       }
       const handle = ptyManager.get(entry.ptyId);
       if (!handle) {
+        logger.warn(
+          { persistentId: msg.persistentId, ptyId: entry.ptyId },
+          'attach_pty_dead',
+        );
         send(ws, { type: 'error', code: 'pty_dead' });
         return;
       }

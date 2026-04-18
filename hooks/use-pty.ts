@@ -113,7 +113,6 @@ export function usePty(events: PtyEvents) {
           const code = typeof msg['code'] === 'string' ? msg['code'] : 'unknown';
           // Log to console so devtools show why we failed without having to
           // sniff raw WS frames. Also forwards to onError for UI surfacing.
-          // eslint-disable-next-line no-console
           console.warn(`[pty] server error: ${code}`);
           eventsRef.current.onError?.(code);
           setAndEmit('error');

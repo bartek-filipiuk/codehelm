@@ -135,6 +135,7 @@ export function Terminal({
         cursorBlink: true,
         fontFamily: 'ui-monospace, Menlo, Consolas, monospace',
         fontSize,
+        scrollback: 10_000,
         theme: {
           background: '#0a0a0a',
           foreground: '#e5e5e5',
