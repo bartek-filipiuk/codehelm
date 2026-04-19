@@ -13,15 +13,16 @@ interface Props {
   onNewTab?: () => void;
 }
 
+const INIT_COMMAND_MAX_LEN = 2048;
+
 export function TabBar({ onNewTab }: Props) {
   const tabs = useTerminalStore((s) => s.tabs);
   const activeId = useTerminalStore((s) => s.activeTabId);
   const setActive = useTerminalStore((s) => s.setActive);
   const closeTab = useTerminalStore((s) => s.closeTab);
-  const renameTab = useTerminalStore((s) => s.renameTab);
+  const editTab = useTerminalStore((s) => s.editTab);
 
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [draft, setDraft] = useState('');
 
   const closeWithToast = (id: string) => {
     const tab = useTerminalStore.getState().tabs.find((t) => t.id === id);
@@ -39,33 +40,21 @@ export function TabBar({ onNewTab }: Props) {
     [editingId, tabs],
   );
 
-  const startEdit = (id: string, currentTitle: string) => {
-    setEditingId(id);
-    setDraft(currentTitle);
-  };
-
-  const commitEdit = () => {
-    if (!activeEditId) return;
-    const trimmed = draft.trim();
-    if (trimmed.length > 0) renameTab(activeEditId, trimmed);
-    setEditingId(null);
-  };
-
-  const cancelEdit = () => {
-    setEditingId(null);
-  };
+  const startEdit = (id: string) => setEditingId(id);
+  const cancelEdit = () => setEditingId(null);
 
   return (
     <div className="tabs-row">
       {tabs.map((t) => {
         const isEditing = activeEditId === t.id;
+        const hasPersistent = t.panes.some((p) => p.persistentId);
         return (
           <div
             key={t.id}
             role="tab"
             aria-selected={t.id === activeId}
             className={cn('tab', t.id === activeId && 'active')}
-            title={isEditing ? undefined : `${t.title} · ${t.cwd} · dbl-click to rename`}
+            title={isEditing ? undefined : `${t.title} · ${t.cwd} · dbl-click to edit`}
             onClick={() => !isEditing && setActive(t.id)}
             onMouseDown={(e) => {
               if (isEditing) return;
@@ -76,24 +65,15 @@ export function TabBar({ onNewTab }: Props) {
             }}
           >
             <span className="dot ready" />
-            {isEditing ? (
-              <RenameInput
-                initialValue={draft}
-                onChange={setDraft}
-                onCommit={commitEdit}
-                onCancel={cancelEdit}
-              />
-            ) : (
-              <span
-                className="mono"
-                onDoubleClick={(e) => {
-                  e.stopPropagation();
-                  startEdit(t.id, t.title);
-                }}
-              >
-                {t.title}
-              </span>
-            )}
+            <span
+              className="mono"
+              onDoubleClick={(e) => {
+                e.stopPropagation();
+                startEdit(t.id);
+              }}
+            >
+              {t.title}
+            </span>
             <button
               type="button"
               className="close"
@@ -106,6 +86,28 @@ export function TabBar({ onNewTab }: Props) {
             >
               ×
             </button>
+            {isEditing && (
+              <TabEditPopover
+                initialTitle={t.title}
+                initialInitCommand={t.initCommand ?? ''}
+                canEditInitCommand={hasPersistent}
+                onCommit={({ title, initCommand }) => {
+                  const patch: { title?: string; initCommand?: string | null } = {};
+                  const trimmedTitle = title.trim();
+                  if (trimmedTitle && trimmedTitle !== t.title) patch.title = trimmedTitle;
+                  if (hasPersistent) {
+                    const nextCmd = initCommand.trim();
+                    const prevCmd = (t.initCommand ?? '').trim();
+                    if (nextCmd !== prevCmd) {
+                      patch.initCommand = nextCmd.length > 0 ? nextCmd : null;
+                    }
+                  }
+                  if (Object.keys(patch).length > 0) editTab(t.id, patch);
+                  setEditingId(null);
+                }}
+                onCancel={cancelEdit}
+              />
+            )}
           </div>
         );
       })}
@@ -125,49 +127,117 @@ export function TabBar({ onNewTab }: Props) {
   );
 }
 
-function RenameInput({
-  initialValue,
-  onChange,
+interface TabEditPopoverProps {
+  initialTitle: string;
+  initialInitCommand: string;
+  canEditInitCommand: boolean;
+  onCommit: (next: { title: string; initCommand: string }) => void;
+  onCancel: () => void;
+}
+
+function TabEditPopover({
+  initialTitle,
+  initialInitCommand,
+  canEditInitCommand,
   onCommit,
   onCancel,
-}: {
-  initialValue: string;
-  onChange: (v: string) => void;
-  onCommit: () => void;
-  onCancel: () => void;
-}) {
-  const ref = useRef<HTMLInputElement>(null);
+}: TabEditPopoverProps) {
+  const [title, setTitle] = useState(initialTitle);
+  const [initCommand, setInitCommand] = useState(initialInitCommand);
+  const ref = useRef<HTMLDivElement>(null);
+  const titleRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    el.focus();
-    el.select();
+    titleRef.current?.focus();
+    titleRef.current?.select();
   }, []);
 
+  // Click-outside cancels. Mousedown (not click) so we beat react's click
+  // bubbling on the tab itself, which would otherwise re-trigger setActive.
+  useEffect(() => {
+    const onDown = (e: MouseEvent) => {
+      const node = ref.current;
+      if (!node) return;
+      if (!node.contains(e.target as Node)) onCancel();
+    };
+    window.addEventListener('mousedown', onDown);
+    return () => window.removeEventListener('mousedown', onDown);
+  }, [onCancel]);
+
+  const submit = () => onCommit({ title, initCommand });
+
   return (
-    <input
+    <div
       ref={ref}
-      type="text"
-      className="mono tab-rename"
-      defaultValue={initialValue}
-      maxLength={TERMINAL_TAB_TITLE_MAX_LEN}
-      aria-label="Rename tab"
-      onChange={(e) => onChange(e.target.value)}
-      onKeyDown={(e) => {
-        e.stopPropagation();
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          onCommit();
-        } else if (e.key === 'Escape') {
-          e.preventDefault();
-          onCancel();
-        }
-      }}
-      onBlur={onCommit}
+      className="tab-edit-popover"
+      role="dialog"
+      aria-label="Edit tab"
       onClick={(e) => e.stopPropagation()}
       onMouseDown={(e) => e.stopPropagation()}
       onDoubleClick={(e) => e.stopPropagation()}
-    />
+    >
+      <label className="tab-edit-row">
+        <span className="tab-edit-label">title</span>
+        <input
+          ref={titleRef}
+          type="text"
+          className="mono tab-edit-input"
+          aria-label="Tab title"
+          value={title}
+          maxLength={TERMINAL_TAB_TITLE_MAX_LEN}
+          onChange={(e) => setTitle(e.target.value)}
+          onKeyDown={(e) => {
+            e.stopPropagation();
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              submit();
+            } else if (e.key === 'Escape') {
+              e.preventDefault();
+              onCancel();
+            }
+          }}
+        />
+      </label>
+      <label className="tab-edit-row">
+        <span className="tab-edit-label">on restart</span>
+        <input
+          type="text"
+          className="mono tab-edit-input"
+          aria-label="Restart command"
+          value={initCommand}
+          maxLength={INIT_COMMAND_MAX_LEN}
+          disabled={!canEditInitCommand}
+          placeholder={
+            canEditInitCommand
+              ? 'e.g. claude --resume <id>'
+              : 'available after server registers this tab'
+          }
+          onChange={(e) => setInitCommand(e.target.value)}
+          onKeyDown={(e) => {
+            e.stopPropagation();
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              submit();
+            } else if (e.key === 'Escape') {
+              e.preventDefault();
+              onCancel();
+            }
+          }}
+        />
+      </label>
+      <div className="tab-edit-actions">
+        <span className="tab-edit-hint">enter saves · esc cancels</span>
+        <button type="button" className="tab-edit-btn" onClick={onCancel}>
+          cancel
+        </button>
+        <button
+          type="button"
+          className="tab-edit-btn primary"
+          onClick={submit}
+        >
+          save
+        </button>
+      </div>
+    </div>
   );
 }

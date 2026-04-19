@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { patchTabAlias } from '@/lib/ui/tab-aliases';
 import {
   deletePersistentTab,
+  editPersistentTab,
   renamePersistentTab,
   type ServerPersistentTab,
 } from '@/lib/ui/persistent-tab-sync';
@@ -72,6 +73,10 @@ interface State {
   closeTab: (id: string) => void;
   setActive: (id: string) => void;
   renameTab: (id: string, title: string) => void;
+  /** Edit title and/or the restart command in one shot. Used by the tab
+   * editor popover so the user can set what gets re-typed after codehelm
+   * restart (e.g. `claude --resume <id>`) for ad-hoc shell tabs. */
+  editTab: (id: string, patch: { title?: string; initCommand?: string | null }) => void;
   clear: () => void;
   registerWriter: (id: string, writer: (data: string) => void) => void;
   unregisterWriter: (id: string) => void;
@@ -169,6 +174,46 @@ export const useTerminalStore = create<State>((set, get) => ({
     if (tab.aliasKey) patchTabAlias(tab.aliasKey, trimmed);
     for (const pane of tab.panes) {
       if (pane.persistentId) renamePersistentTab(pane.persistentId, trimmed);
+    }
+  },
+  editTab: (id, patch) => {
+    const { tabs } = get();
+    const tab = tabs.find((t) => t.id === id);
+    if (!tab) return;
+    const nextTitle =
+      patch.title !== undefined ? patch.title.trim().slice(0, TAB_TITLE_MAX_LEN) : undefined;
+    if (nextTitle !== undefined && !nextTitle) {
+      // Treat empty-after-trim as "leave title alone" — same guard as
+      // renameTab — so an accidental whitespace-only edit can't blank the
+      // tab label.
+      delete (patch as { title?: string }).title;
+    }
+    const nextInitCommand =
+      patch.initCommand === undefined
+        ? undefined
+        : patch.initCommand === null
+          ? null
+          : patch.initCommand.slice(0, 2048);
+    set({
+      tabs: tabs.map((t) => {
+        if (t.id !== id) return t;
+        const next: TerminalTab = { ...t };
+        if (nextTitle) next.title = nextTitle;
+        if (nextInitCommand === null) delete next.initCommand;
+        else if (nextInitCommand !== undefined) next.initCommand = nextInitCommand;
+        return next;
+      }),
+    });
+    if (nextTitle && tab.aliasKey) patchTabAlias(tab.aliasKey, nextTitle);
+    // Persist server-side per persistent pane. Build the patch once: the PUT
+    // route accepts title/initCommand in one body, so a single round-trip
+    // updates both fields atomically.
+    const serverPatch: { title?: string; initCommand?: string | null } = {};
+    if (nextTitle) serverPatch.title = nextTitle;
+    if (nextInitCommand !== undefined) serverPatch.initCommand = nextInitCommand;
+    if (Object.keys(serverPatch).length === 0) return;
+    for (const pane of tab.panes) {
+      if (pane.persistentId) void editPersistentTab(pane.persistentId, serverPatch);
     }
   },
   clear: () => set({ tabs: [], activeTabId: null }),
@@ -317,6 +362,11 @@ export const useTerminalStore = create<State>((set, get) => ({
         cwd: s.cwd,
         ...(s.shell !== undefined ? { shell: s.shell } : {}),
         ...(s.args !== undefined ? { args: s.args } : {}),
+        // initCommand on the pane is consumed only by ephemeral spawns
+        // (Terminal types it client-side). Persistent panes have it run
+        // server-side at respawn, so leaving it on the pane would just
+        // duplicate the typing — track it on the tab instead so the editor
+        // popover can show/edit it.
         persistentId: s.persistentId,
       };
       return {
@@ -325,6 +375,7 @@ export const useTerminalStore = create<State>((set, get) => ({
         cwd: s.cwd,
         ...(s.shell !== undefined ? { shell: s.shell } : {}),
         ...(s.args !== undefined ? { args: s.args } : {}),
+        ...(s.initCommand !== undefined ? { initCommand: s.initCommand } : {}),
         title: s.title || 'persistent-tab',
         createdAt: s.createdAt,
         ...(s.aliasKey ? { aliasKey: s.aliasKey } : {}),

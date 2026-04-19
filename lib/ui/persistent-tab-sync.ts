@@ -90,6 +90,30 @@ export function renamePersistentTab(persistentId: string, title: string): void {
   }).catch(() => undefined);
 }
 
+/** Edits a persistent tab's title and/or restart command in one round-trip.
+ * Pass `initCommand: null` to clear the command (next respawn falls back to
+ * a bare shell); pass a string to set it; omit the key to leave it as-is.
+ * Returns the updated tab so callers can sync local state. */
+export async function editPersistentTab(
+  persistentId: string,
+  patch: { title?: string; initCommand?: string | null },
+): Promise<ServerPersistentTab | null> {
+  if (typeof fetch !== 'function') return null;
+  try {
+    const res = await fetch(`/api/persistent-tabs/${persistentId}`, {
+      method: 'PUT',
+      credentials: 'same-origin',
+      headers: csrfHeaders(),
+      body: JSON.stringify(patch),
+    });
+    if (!res.ok) return null;
+    const body = (await res.json()) as { tab?: ServerPersistentTab };
+    return body.tab ?? null;
+  } catch {
+    return null;
+  }
+}
+
 /** Asks the server to kill the backing PTY and spawn a fresh one with the
  * tab's stored shell/args/initCommand. Same persistentId, brand-new process —
  * lets the RESTART button do a real restart for `claude --resume X` and

@@ -1357,6 +1357,91 @@
   pointer-events: none;
 }
 
+.tab-edit-popover {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 320px;
+  padding: 10px 12px;
+  background: var(--bg-2);
+  border: 1px solid var(--gold-700);
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  cursor: default;
+}
+.tab-edit-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.tab-edit-label {
+  font-family: var(--font-jetbrains), monospace;
+  font-size: 10px;
+  color: var(--fg-3);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  flex: 0 0 70px;
+}
+.tab-edit-input {
+  flex: 1 1 auto;
+  font-family: var(--font-jetbrains), monospace;
+  font-size: 11px;
+  color: var(--fg-0);
+  background: var(--bg-3);
+  border: 1px solid var(--line-3);
+  border-radius: 3px;
+  padding: 4px 6px;
+  height: 22px;
+  outline: none;
+}
+.tab-edit-input:focus {
+  border-color: var(--gold-700);
+  box-shadow: 0 0 0 2px var(--gold-glow);
+}
+.tab-edit-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.tab-edit-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-top: 4px;
+  border-top: 1px solid var(--line-2);
+}
+.tab-edit-hint {
+  flex: 1 1 auto;
+  font-size: 10px;
+  color: var(--fg-4);
+}
+.tab-edit-btn {
+  font-family: var(--font-jetbrains), monospace;
+  font-size: 11px;
+  color: var(--fg-2);
+  background: var(--bg-0);
+  border: 1px solid var(--line-3);
+  border-radius: 3px;
+  padding: 3px 10px;
+  cursor: pointer;
+}
+.tab-edit-btn:hover {
+  color: var(--fg-0);
+  border-color: var(--gold-700);
+}
+.tab-edit-btn.primary {
+  color: var(--bg-0);
+  background: var(--gold-400);
+  border-color: var(--gold-400);
+}
+.tab-edit-btn.primary:hover {
+  background: var(--gold-300);
+  border-color: var(--gold-300);
+}
+
 .term-head {
   display: flex;
   align-items: center;

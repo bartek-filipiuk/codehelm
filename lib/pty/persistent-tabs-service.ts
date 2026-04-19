@@ -46,6 +46,19 @@ async function spawnAndRegister(tab: PersistentTab): Promise<PtyHandle> {
   return handle;
 }
 
+/** If the tab was opened from the session list its aliasKey carries the
+ * resume id. For older entries (or ones registered before initCommand was
+ * persisted) we can recover the command from there so the user gets their
+ * Claude session back on restart instead of a bare shell. */
+function deriveInitCommandFromAlias(tab: PersistentTab): string | null {
+  if (tab.initCommand) return null;
+  const alias = tab.aliasKey;
+  if (!alias || !alias.startsWith('resume:')) return null;
+  const sessionId = alias.slice('resume:'.length).trim();
+  if (!sessionId) return null;
+  return `claude --resume ${sessionId}`;
+}
+
 export async function restoreAllAtStartup(): Promise<void> {
   const tabs = await storeReadAll();
   if (tabs.length === 0) {
@@ -53,9 +66,29 @@ export async function restoreAllAtStartup(): Promise<void> {
     return;
   }
   let restored = 0;
+  let migrated = 0;
   for (const tab of tabs) {
+    let effectiveTab = tab;
+    const derived = deriveInitCommandFromAlias(tab);
+    if (derived) {
+      // Persist the recovered command so the user sees consistent state in
+      // /jobs and any future rename PUT cannot accidentally drop it again.
+      try {
+        const updated = await storeUpdate(tab.persistentId, { initCommand: derived });
+        effectiveTab = updated;
+        migrated += 1;
+      } catch (err) {
+        // Disk write failed — still spawn with the in-memory derived value
+        // so this restart isn't degraded; we'll try to migrate again next time.
+        effectiveTab = { ...tab, initCommand: derived };
+        logger.warn(
+          { err: (err as Error).message, persistentId: tab.persistentId },
+          'persistent_initcmd_migrate_failed',
+        );
+      }
+    }
     try {
-      await spawnAndRegister(tab);
+      await spawnAndRegister(effectiveTab);
       restored += 1;
     } catch (err) {
       logger.warn(
@@ -64,7 +97,10 @@ export async function restoreAllAtStartup(): Promise<void> {
       );
     }
   }
-  logger.info({ restored, total: tabs.length }, 'persistent_tabs_restored');
+  logger.info(
+    { restored, migrated, total: tabs.length },
+    'persistent_tabs_restored',
+  );
 }
 
 export async function createPersistentTab(input: CreatePersistentTabInput): Promise<{

@@ -201,4 +201,41 @@ describe('terminal-slice', () => {
       );
     });
   });
+
+  describe('editTab', () => {
+    it('clears initCommand when explicit null is passed', () => {
+      const id = useTerminalStore
+        .getState()
+        .openTab({ cwd: '/a', title: 'x', initCommand: 'claude --resume foo' })!;
+      useTerminalStore.getState().editTab(id, { initCommand: null });
+      const tab = useTerminalStore.getState().tabs.find((t) => t.id === id);
+      expect(tab?.initCommand).toBeUndefined();
+    });
+
+    it('leaves initCommand untouched when patch omits it', () => {
+      const id = useTerminalStore
+        .getState()
+        .openTab({ cwd: '/a', title: 'x', initCommand: 'claude --resume foo' })!;
+      useTerminalStore.getState().editTab(id, { title: 'renamed' });
+      const tab = useTerminalStore.getState().tabs.find((t) => t.id === id);
+      expect(tab?.title).toBe('renamed');
+      expect(tab?.initCommand).toBe('claude --resume foo');
+    });
+
+    it('updates both title and initCommand atomically', () => {
+      const id = useTerminalStore.getState().openTab({ cwd: '/a', title: 'x' })!;
+      useTerminalStore.getState().editTab(id, { title: 'renamed', initCommand: 'claude' });
+      const tab = useTerminalStore.getState().tabs.find((t) => t.id === id);
+      expect(tab?.title).toBe('renamed');
+      expect(tab?.initCommand).toBe('claude');
+    });
+
+    it('whitespace-only title is ignored, command still applies', () => {
+      const id = useTerminalStore.getState().openTab({ cwd: '/a', title: 'orig' })!;
+      useTerminalStore.getState().editTab(id, { title: '   ', initCommand: 'claude' });
+      const tab = useTerminalStore.getState().tabs.find((t) => t.id === id);
+      expect(tab?.title).toBe('orig');
+      expect(tab?.initCommand).toBe('claude');
+    });
+  });
 });
