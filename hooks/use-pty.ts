@@ -120,13 +120,19 @@ export function usePty(events: PtyEvents) {
       };
 
       ws.onclose = () => {
-        wsRef.current = null;
-        spawnedRef.current = false;
-        setAndEmit('closed');
+        // Guard against the close-then-reconnect race: if `close()` already
+        // ran and a new ws was opened, `wsRef.current` points at the new
+        // socket — we must not null it from this stale handler, otherwise
+        // `write()`/`resize()` silently drop everything until the next mount.
+        if (wsRef.current === ws) {
+          wsRef.current = null;
+          spawnedRef.current = false;
+          setAndEmit('closed');
+        }
       };
 
       ws.onerror = () => {
-        setAndEmit('error');
+        if (wsRef.current === ws) setAndEmit('error');
       };
     },
     [setAndEmit],
@@ -147,6 +153,18 @@ export function usePty(events: PtyEvents) {
   const close = useCallback(() => {
     const ws = wsRef.current;
     if (!ws) return;
+    // Detach handlers FIRST so any in-flight 'data'/'attached'/'exit' frames,
+    // and especially the eventual 'close' event, cannot fire and corrupt
+    // state for a follow-up connect(). Without this, a fast close→connect
+    // (the RESTART button) lets the OLD ws.onclose null `wsRef.current`
+    // AFTER the new ws has been assigned — leaving the new socket orphaned
+    // (write/resize silently drop everything) while a second restart spawns
+    // yet another socket that double-subscribes to the same persistent PTY,
+    // which is what shows up as duplicated output and a "frozen" tab.
+    ws.onopen = null;
+    ws.onmessage = null;
+    ws.onclose = null;
+    ws.onerror = null;
     try {
       if (persistentRef.current) {
         ws.send(JSON.stringify({ type: 'detach' }));
@@ -164,7 +182,9 @@ export function usePty(events: PtyEvents) {
     wsRef.current = null;
     spawnedRef.current = false;
     persistentRef.current = false;
-  }, []);
+    receivedRef.current = 0;
+    setAndEmit('closed');
+  }, [setAndEmit]);
 
   useEffect(() => {
     return () => close();

@@ -36,7 +36,7 @@ Re-run `pnpm build` (or `./bin/codehelm --build`) whenever you pull new
 source changes. Use `./bin/codehelm --dev` if you want HMR and don't mind
 the slower cold start.
 
-### macOS (supported, needs hands-on verification)
+### macOS (verified on Darwin 25.4 arm64)
 
 The codebase has macOS-aware helpers (`lib/server/platform.ts`) for:
 
@@ -51,12 +51,13 @@ pnpm install
 ./bin/codehelm
 ```
 
-> ⚠ **Not yet verified on macOS hardware.** `@homebridge/node-pty-prebuilt-multiarch`
-> should carry darwin-arm64 / darwin-x64 prebuilds, but this hasn't been smoke-tested
-> end-to-end on an actual Mac. If `pnpm install` triggers `node-gyp` instead of dropping
-> a prebuilt binary, or if the PTY crashes on spawn, please open an issue with the output
-> of `node -e "require('@homebridge/node-pty-prebuilt-multiarch')"` — that's tracked as
-> task T25.
+> ✅ **Verified end-to-end on Darwin 25.4.0 (arm64), Node 22.14, pnpm 10.33, Chrome 147**
+> (PR #7). `@homebridge/node-pty-prebuilt-multiarch@0.12.0` fetches the `darwin-arm64
+> node-v127` prebuild — no `node-gyp` fallback. `pnpm install && pnpm build && pnpm test`
+> is green (582/582) and `./bin/codehelm` hydrates the production Chrome window against
+> real `~/.claude/projects` data. This closes task T25. If a future Darwin version
+> reintroduces a prebuild gap, `node -e "require('@homebridge/node-pty-prebuilt-multiarch')"`
+> remains the recommended smoke test.
 
 ### Windows
 
@@ -77,19 +78,29 @@ node bin/install.ts             # full install + build + symlink
 
 ## Screenshots
 
-**Session history. Markdown, tool_use cards, tool_result with diffs, all
-virtualised and searchable.**
+**Full command center. Projects sidebar, session list with per-session
+metadata (cost, mtime, message count), and a live `claude --resume`
+terminal on the right — all in one Chromium window.**
 
-![History view](screens/history.png)
+![Shell view](screens/shell-1.png)
 
-**Multi-tab terminal. `claude --resume <id>` is one click.**
+**Split layout with a pane grid (1, 1×2, 2×1, 2×2). Up to 16 concurrent
+PTYs, each with its own state, git branch badge, and persisted pane
+sizes.**
 
-![Shell view](screens/shell.png)
+![Split view](screens/split.png)
 
-**Tool calls expand into inline, syntax-highlighted cards. No more
-`[tool_use]` placeholders.**
+**Session history viewer. Markdown, `tool_use` cards, `tool_result`
+diffs for `Edit`/`Write`, search, filters, outline, virtualised — works
+even on 100 MB+ sessions.**
 
-![Tools view](screens/tools.png)
+![History view](screens/user-history.png)
+
+**Scheduled prompts. Jobs bound by `cron_tag` fire into persistent tabs
+(auto-respawned at startup). Ready-check + per-tab mutex keep cron out
+of an in-flight Claude response.**
+
+![Cron jobs view](screens/crons.png)
 
 ---
 
@@ -514,7 +525,6 @@ Shipped since phase-7-done (T01–T29):
 
 Open:
 
-- T25 — `node-pty` macOS prebuild verification (needs a Darwin host).
 - README polish + fresh banner after the `claude-ui → codehelm`
   rebrand landed.
 

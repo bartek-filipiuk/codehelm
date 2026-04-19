@@ -354,6 +354,17 @@ export function Terminal({
             size="sm"
             variant="outline"
             onClick={() => {
+              // Reset xterm before reconnecting: persistent PTYs send back
+              // the last 2KB as `tail` on attach (see pty-channel.ts), and
+              // writing it on top of the existing buffer at the current
+              // cursor produces the visible "duplicated message fragment"
+              // that users see on RESTART. A clean buffer + fresh tail
+              // gives a coherent view; TUI apps will repaint on next event.
+              try {
+                termRef.current?.reset();
+              } catch {
+                /* ignore */
+              }
               close();
               const cols = termRef.current?.cols ?? 80;
               const rows = termRef.current?.rows ?? 24;
