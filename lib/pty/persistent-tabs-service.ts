@@ -25,7 +25,13 @@ async function spawnAndRegister(tab: PersistentTab): Promise<PtyHandle> {
   });
   persistentTabsRegistry.register(tab, handle.id);
   handle.onExit(() => {
-    persistentTabsRegistry.unregister(tab.persistentId);
+    // Only clear the registry entry if it still points at THIS pty. After a
+    // user-triggered respawn the registry already holds the fresh handle
+    // (different ptyId), and the dying old handle's exit must not nuke it.
+    const entry = persistentTabsRegistry.getEntry(tab.persistentId);
+    if (entry && entry.ptyId === handle.id) {
+      persistentTabsRegistry.unregister(tab.persistentId);
+    }
   });
   if (tab.initCommand) {
     const cmd = tab.initCommand;

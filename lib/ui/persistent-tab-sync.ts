@@ -89,3 +89,21 @@ export function renamePersistentTab(persistentId: string, title: string): void {
     body: JSON.stringify({ title }),
   }).catch(() => undefined);
 }
+
+/** Asks the server to kill the backing PTY and spawn a fresh one with the
+ * tab's stored shell/args/initCommand. Same persistentId, brand-new process —
+ * lets the RESTART button do a real restart for `claude --resume X` and
+ * other long-running TUIs instead of just reattaching to the same session. */
+export async function respawnPersistentTabRequest(persistentId: string): Promise<boolean> {
+  if (typeof fetch !== 'function') return false;
+  try {
+    const res = await fetch(`/api/persistent-tabs/${persistentId}`, {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: csrfHeaders(),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}

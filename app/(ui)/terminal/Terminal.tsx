@@ -7,7 +7,10 @@ import { usePty, type PtyStatus } from '@/hooks/use-pty';
 import { useSettings } from '@/hooks/use-settings';
 import { useTerminalStore } from '@/stores/terminal-slice';
 import { toastInfo } from '@/lib/ui/toast';
-import { registerPersistentTab } from '@/lib/ui/persistent-tab-sync';
+import {
+  registerPersistentTab,
+  respawnPersistentTabRequest,
+} from '@/lib/ui/persistent-tab-sync';
 
 export interface TerminalProps {
   cwd: string;
@@ -354,28 +357,46 @@ export function Terminal({
             size="sm"
             variant="outline"
             onClick={() => {
-              // Reset xterm before reconnecting: persistent PTYs send back
-              // the last 2KB as `tail` on attach (see pty-channel.ts), and
-              // writing it on top of the existing buffer at the current
-              // cursor produces the visible "duplicated message fragment"
-              // that users see on RESTART. A clean buffer + fresh tail
-              // gives a coherent view; TUI apps will repaint on next event.
+              // RESTART semantics:
+              //  - persistent tab → ask the server to kill the backing PTY
+              //    and spawn a fresh one with the original initCommand
+              //    (e.g. `claude --resume <id>`). This is a real restart of
+              //    the underlying process — the user's "stuck" Claude
+              //    session is replaced by a new one against the same resume
+              //    id, no `/exit` keystroke required.
+              //  - ephemeral tab → kill + spawn a new shell with the same
+              //    args; same effect, no server-side store involved.
+              // In both cases reset xterm first so leftover ANSI state and
+              // any replayed tail can't garble the new session's output.
               try {
                 termRef.current?.reset();
               } catch {
                 /* ignore */
               }
-              close();
               const cols = termRef.current?.cols ?? 80;
               const rows = termRef.current?.rows ?? 24;
-              connect({
-                cwd,
-                cols,
-                rows,
-                ...(shell ? { shell } : {}),
-                ...(args ? { args } : {}),
-                ...(persistentId ? { persistentId } : {}),
-              });
+              if (persistentId) {
+                close();
+                void (async () => {
+                  const ok = await respawnPersistentTabRequest(persistentId);
+                  if (!ok) {
+                    termRef.current?.write(
+                      '\r\n\x1b[31m[restart failed: server could not respawn this tab]\x1b[0m\r\n',
+                    );
+                    return;
+                  }
+                  connect({ cwd, cols, rows, persistentId });
+                })();
+              } else {
+                close();
+                connect({
+                  cwd,
+                  cols,
+                  rows,
+                  ...(shell ? { shell } : {}),
+                  ...(args ? { args } : {}),
+                });
+              }
             }}
           >
             restart
