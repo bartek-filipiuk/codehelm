@@ -40,6 +40,14 @@ export function TabManager() {
           <PaneGrid tab={t} />
         </div>
       ))}
+      {!activeId && (
+        <div
+          className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center p-8 text-center text-sm"
+          style={{ color: 'var(--fg-3)' }}
+        >
+          Select a tab above to open its terminal.
+        </div>
+      )}
     </div>
   );
 }
