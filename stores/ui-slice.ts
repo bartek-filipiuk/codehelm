@@ -21,6 +21,7 @@ interface UiState {
   pendingEventIndex: number | null;
   sortMode: SortMode;
   projectGrouping: ProjectGrouping;
+  focusMode: boolean;
   setSelectedProject: (slug: string | null) => void;
   setSelectedSession: (id: string | null) => void;
   setSearch: (q: string) => void;
@@ -32,6 +33,8 @@ interface UiState {
   consumePendingEvent: () => void;
   setSortMode: (mode: SortMode) => void;
   setProjectGrouping: (grouping: ProjectGrouping) => void;
+  setFocusMode: (value: boolean) => void;
+  toggleFocusMode: () => void;
 }
 
 const DEFAULT_SORT: SortMode = 'activity';
@@ -49,6 +52,11 @@ function initialProjectGrouping(): ProjectGrouping {
   return isProjectGrouping(stored) ? stored : DEFAULT_GROUPING;
 }
 
+function initialFocusMode(): boolean {
+  if (typeof window === 'undefined') return false;
+  return loadLayout().focusMode === true;
+}
+
 export const useUiStore = create<UiState>((set) => ({
   selectedProjectSlug: null,
   selectedSessionId: null,
@@ -59,6 +67,7 @@ export const useUiStore = create<UiState>((set) => ({
   pendingEventIndex: null,
   sortMode: initialSortMode(),
   projectGrouping: initialProjectGrouping(),
+  focusMode: initialFocusMode(),
   setSelectedProject: (slug) =>
     set(() => ({
       selectedProjectSlug: slug,
@@ -86,4 +95,14 @@ export const useUiStore = create<UiState>((set) => ({
     patchLayout({ projectGrouping: grouping });
     set({ projectGrouping: grouping });
   },
+  setFocusMode: (value) => {
+    patchLayout({ focusMode: value });
+    set({ focusMode: value });
+  },
+  toggleFocusMode: () =>
+    set((state) => {
+      const next = !state.focusMode;
+      patchLayout({ focusMode: next });
+      return { focusMode: next };
+    }),
 }));

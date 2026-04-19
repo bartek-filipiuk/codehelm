@@ -5,12 +5,14 @@ import {
   useEffect,
   useRef,
   useState,
+  type CSSProperties,
   type KeyboardEvent as RKeyboardEvent,
   type PointerEvent as RPointerEvent,
   type ReactNode,
 } from 'react';
 
 import { LAYOUT_STORAGE_KEY, loadLayout, patchLayout } from '@/lib/ui/layout-storage';
+import { useUiStore } from '@/stores/ui-slice';
 
 export { LAYOUT_STORAGE_KEY };
 export const MIN_SIDEBAR = 200;
@@ -61,6 +63,7 @@ export function ResizableColumns({ sidebar, sessions, viewer }: ResizableColumns
   });
   const [hydrated, setHydrated] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const focusMode = useUiStore((s) => s.focusMode);
 
   useEffect(() => {
     const rawVp = containerRef.current?.clientWidth ?? 0;
@@ -127,7 +130,13 @@ export function ResizableColumns({ sidebar, sessions, viewer }: ResizableColumns
     setWidths(clampWidths({ sidebar: DEFAULT_SIDEBAR, sessions: DEFAULT_SESSIONS }, viewport()));
   }, [viewport]);
 
-  const gridTemplate = `${widths.sidebar}px ${SPLITTER_PX}px ${widths.sessions}px ${SPLITTER_PX}px minmax(0, 1fr)`;
+  const gridTemplate = focusMode
+    ? 'minmax(0, 1fr)'
+    : `${widths.sidebar}px ${SPLITTER_PX}px ${widths.sessions}px ${SPLITTER_PX}px minmax(0, 1fr)`;
+  const sideWrapStyle: CSSProperties = focusMode
+    ? { display: 'none' }
+    : { display: 'contents' };
+  const splitterStyle: CSSProperties = focusMode ? { display: 'none' } : {};
 
   return (
     <div
@@ -135,34 +144,51 @@ export function ResizableColumns({ sidebar, sessions, viewer }: ResizableColumns
       className="grid h-screen text-[color:var(--fg-0)]"
       style={{ gridTemplateColumns: gridTemplate, background: 'var(--bg-0)' }}
       data-testid="resizable-columns"
+      data-focus-mode={focusMode || undefined}
     >
-      {sidebar}
+      <div
+        style={sideWrapStyle}
+        aria-hidden={focusMode || undefined}
+        data-testid="column-sidebar"
+      >
+        {sidebar}
+      </div>
       <div
         role="separator"
         aria-orientation="vertical"
         aria-label="Resize sidebar"
         aria-valuemin={MIN_SIDEBAR}
         aria-valuenow={widths.sidebar}
-        tabIndex={0}
+        aria-hidden={focusMode || undefined}
+        tabIndex={focusMode ? -1 : 0}
         onPointerDown={startDrag('sidebar')}
         onDoubleClick={onDoubleClick}
         onKeyDown={onKey('sidebar')}
         data-testid="splitter-sidebar"
         className="cursor-col-resize touch-none bg-[var(--line)] transition-colors hover:bg-[var(--line-3)] focus:bg-[var(--gold-700)] focus:outline-none"
+        style={splitterStyle}
       />
-      {sessions}
+      <div
+        style={sideWrapStyle}
+        aria-hidden={focusMode || undefined}
+        data-testid="column-sessions"
+      >
+        {sessions}
+      </div>
       <div
         role="separator"
         aria-orientation="vertical"
         aria-label="Resize session list"
         aria-valuemin={MIN_SESSIONS}
         aria-valuenow={widths.sessions}
-        tabIndex={0}
+        aria-hidden={focusMode || undefined}
+        tabIndex={focusMode ? -1 : 0}
         onPointerDown={startDrag('sessions')}
         onDoubleClick={onDoubleClick}
         onKeyDown={onKey('sessions')}
         data-testid="splitter-sessions"
         className="cursor-col-resize touch-none bg-[var(--line)] transition-colors hover:bg-[var(--line-3)] focus:bg-[var(--gold-700)] focus:outline-none"
+        style={splitterStyle}
       />
       {viewer}
     </div>

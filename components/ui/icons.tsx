@@ -166,3 +166,18 @@ export function IconX(props: SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
+
+export function IconFocus(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg width="12" height="12" viewBox="0 0 14 14" fill="none" aria-hidden {...props}>
+      <circle cx="7" cy="7" r="5" stroke="currentColor" strokeWidth="1.3" />
+      <circle cx="7" cy="7" r="1.4" fill="currentColor" />
+      <path
+        d="M7 1v1.6M7 11.4V13M1 7h1.6M11.4 7H13"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}

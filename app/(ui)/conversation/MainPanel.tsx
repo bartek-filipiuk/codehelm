@@ -1,5 +1,7 @@
 'use client';
 
+import { useEffect } from 'react';
+
 import { useUiStore } from '@/stores/ui-slice';
 import { useProjects } from '@/hooks/use-projects';
 import { useTerminalStore } from '@/stores/terminal-slice';
@@ -14,6 +16,7 @@ import {
   IconSettings,
 } from '@/components/ui/icons';
 import { Viewer } from './Viewer';
+import { FocusToggle } from './FocusToggle';
 import { TabBar } from '@/app/(ui)/terminal/TabBar';
 import { TabManager } from '@/app/(ui)/terminal/TabManager';
 import { QuickActions } from '@/app/(ui)/terminal/QuickActions';
@@ -28,6 +31,7 @@ export function MainPanel() {
   const projectSlug = useUiStore((s) => s.selectedProjectSlug);
   const terminalOpen = useUiStore((s) => s.terminalOpen);
   const editorOpen = useUiStore((s) => s.editorOpen);
+  const focusMode = useUiStore((s) => s.focusMode);
   const openTerminal = useUiStore((s) => s.openTerminal);
   const closeTerminal = useUiStore((s) => s.closeTerminal);
   const openEditor = useUiStore((s) => s.openEditor);
@@ -48,6 +52,28 @@ export function MainPanel() {
     });
     if (id) openTerminal(activeProject.resolvedCwd);
   };
+
+  useEffect(() => {
+    if (!focusMode) return;
+    const uiState = useUiStore.getState();
+    const termState = useTerminalStore.getState();
+    if (uiState.editorOpen) uiState.closeEditor();
+    if (termState.tabs.length > 0) {
+      if (!uiState.terminalOpen) {
+        uiState.openTerminal(termState.tabs[0]?.cwd ?? '/');
+      }
+      return;
+    }
+    if (activeProject?.resolvedCwd) {
+      const id = termState.openTab({
+        projectSlug: activeProject.slug,
+        cwd: activeProject.resolvedCwd,
+        title: `shell (${activeProject.slug.slice(-24)})`,
+        aliasKey: `shell:${activeProject.slug}:${activeProject.resolvedCwd}`,
+      });
+      if (id) uiState.openTerminal(activeProject.resolvedCwd);
+    }
+  }, [focusMode, activeProject]);
 
   const mode: Mode = editorOpen
     ? 'editor'
@@ -77,43 +103,46 @@ export function MainPanel() {
   return (
     <div className="flex h-full min-h-0 flex-col">
       <header className="main-head">
-        <div className="seg" role="tablist">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={mode === 'viewer'}
-            className={cn(mode === 'viewer' && 'on')}
-            onClick={() => setMode('viewer')}
-          >
-            <IconHistory /> History
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={mode === 'terminal'}
-            className={cn(mode === 'terminal' && 'on')}
-            onClick={() => setMode('terminal')}
-            disabled={!activeProject?.resolvedCwd && tabs.length === 0}
-            title={
-              !activeProject?.resolvedCwd && tabs.length === 0
-                ? 'Pick a project to open a terminal'
-                : 'Switch to terminal'
-            }
-          >
-            <IconTerm /> Terminal
-            <span className="pill">{tabs.length}/16</span>
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={mode === 'editor'}
-            className={cn(mode === 'editor' && 'on')}
-            onClick={() => setMode('editor')}
-          >
-            <IconEdit /> CLAUDE.md
-          </button>
-        </div>
+        {!focusMode && (
+          <div className="seg" role="tablist">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={mode === 'viewer'}
+              className={cn(mode === 'viewer' && 'on')}
+              onClick={() => setMode('viewer')}
+            >
+              <IconHistory /> History
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={mode === 'terminal'}
+              className={cn(mode === 'terminal' && 'on')}
+              onClick={() => setMode('terminal')}
+              disabled={!activeProject?.resolvedCwd && tabs.length === 0}
+              title={
+                !activeProject?.resolvedCwd && tabs.length === 0
+                  ? 'Pick a project to open a terminal'
+                  : 'Switch to terminal'
+              }
+            >
+              <IconTerm /> Terminal
+              <span className="pill">{tabs.length}/16</span>
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={mode === 'editor'}
+              className={cn(mode === 'editor' && 'on')}
+              onClick={() => setMode('editor')}
+            >
+              <IconEdit /> CLAUDE.md
+            </button>
+          </div>
+        )}
         <div style={{ flex: 1 }} />
+        <FocusToggle />
         <CHButton
           variant="outline"
           size="sm"

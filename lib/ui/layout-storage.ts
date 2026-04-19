@@ -9,6 +9,7 @@ export interface LayoutState {
   sortMode?: SortMode;
   editorPreview?: boolean;
   projectGrouping?: ProjectGrouping;
+  focusMode?: boolean;
 }
 
 const VALID_SORTS: SortMode[] = ['activity', 'name', 'sessions'];
@@ -47,6 +48,8 @@ export function loadLayout(): LayoutState {
   ) {
     out.projectGrouping = projectGrouping as ProjectGrouping;
   }
+  const focusMode = raw['focusMode'];
+  if (typeof focusMode === 'boolean') out.focusMode = focusMode;
   return out;
 }
 
