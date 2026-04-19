@@ -1,33 +1,22 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
 import { useTerminalStore } from '@/stores/terminal-slice';
 import { PaneGrid } from '@/components/terminal/PaneGrid';
 import { cn } from '@/lib/utils';
-import { fetchPersistentTabs } from '@/lib/ui/persistent-tab-sync';
 
 /**
  * Renders every terminal tab as a mounted PaneGrid. Inactive tabs stay in the
  * DOM (keeps xterm state + PTY alive) but are invisible and positioned
  * offscreen so addon-fit sees valid dimensions.
  *
- * On first mount we also hydrate the store with any persistent tabs that the
- * server already knows about (browser reload, server restart with auto-respawn)
- * so the user's workspace reappears without action.
+ * Hydration of persistent tabs happens in `PersistentTabsBootstrap` at the
+ * page root so the store is populated before the user switches into terminal
+ * mode — we used to hydrate here but TabManager only mounts inside terminal
+ * mode, which left the store empty on a fresh load.
  */
 export function TabManager() {
   const tabs = useTerminalStore((s) => s.tabs);
   const activeId = useTerminalStore((s) => s.activeTabId);
-  const hydrate = useTerminalStore((s) => s.hydrate);
-  const hydratedRef = useRef(false);
-
-  useEffect(() => {
-    if (hydratedRef.current) return;
-    hydratedRef.current = true;
-    void fetchPersistentTabs().then((serverTabs) => {
-      if (serverTabs.length > 0) hydrate(serverTabs);
-    });
-  }, [hydrate]);
 
   if (tabs.length === 0) {
     return (

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { getTabAlias, patchTabAlias } from '@/lib/ui/tab-aliases';
+import { patchTabAlias } from '@/lib/ui/tab-aliases';
 import {
   deletePersistentTab,
   renamePersistentTab,
@@ -98,7 +98,6 @@ export const useTerminalStore = create<State>((set, get) => ({
     const nextSeq = _seq + 1;
     const id = `t-${Date.now()}-${nextSeq}`;
     const paneId = `p-${Date.now()}-${nextSeq}`;
-    const savedAlias = getTabAlias(cfg.aliasKey);
     const pane: TerminalPane = {
       id: paneId,
       cwd: cfg.cwd,
@@ -114,7 +113,11 @@ export const useTerminalStore = create<State>((set, get) => ({
       ...(cfg.shell !== undefined ? { shell: cfg.shell } : {}),
       ...(cfg.args !== undefined ? { args: cfg.args } : {}),
       ...(cfg.initCommand !== undefined ? { initCommand: cfg.initCommand } : {}),
-      title: savedAlias ?? cfg.title,
+      // Every new tab uses cfg.title as its default. Rename persistence lives
+      // server-side (per unique persistentId), so NOT looking up the alias
+      // here prevents sibling shell tabs — which share aliasKey
+      // `shell:<slug>:<cwd>` — from inheriting each other's rename.
+      title: cfg.title,
       createdAt: Date.now(),
       ...(cfg.aliasKey ? { aliasKey: cfg.aliasKey } : {}),
       layout: 'single',
@@ -287,10 +290,9 @@ export const useTerminalStore = create<State>((set, get) => ({
       seq += 1;
       const tabId = `t-${now}-${seq}-h`;
       const paneId = `p-${now}-${seq}-h`;
-      // Server-side title is authoritative since renameTab now PUTs server-side.
-      // localStorage fallback is only used when the server title is empty
-      // (defensive — schema requires non-empty but old rows might be odd).
-      const savedAlias = getTabAlias(s.aliasKey ?? undefined);
+      // Server-side title is authoritative — renameTab PUTs there. No
+      // localStorage fallback because that keys on aliasKey (non-unique for
+      // shell tabs) and would clobber sibling titles.
       const pane: TerminalPane = {
         id: paneId,
         cwd: s.cwd,
@@ -304,7 +306,7 @@ export const useTerminalStore = create<State>((set, get) => ({
         cwd: s.cwd,
         ...(s.shell !== undefined ? { shell: s.shell } : {}),
         ...(s.args !== undefined ? { args: s.args } : {}),
-        title: s.title || savedAlias || 'persistent-tab',
+        title: s.title || 'persistent-tab',
         createdAt: s.createdAt,
         ...(s.aliasKey ? { aliasKey: s.aliasKey } : {}),
         layout: 'single' as TerminalLayout,

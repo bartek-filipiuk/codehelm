@@ -173,9 +173,13 @@ describe('terminal-slice', () => {
     });
   });
 
-  describe('openTab alias hydration', () => {
-    it('applies a stored alias when the key matches', () => {
-      // Pre-seed as if a previous session wrote this.
+  describe('openTab title source', () => {
+    it('always uses cfg.title and ignores any localStorage alias for the key', () => {
+      // Pre-seed as if a previous session wrote this — openTab used to read
+      // it, which caused sibling shell tabs (shell:<slug>:<cwd>) to inherit
+      // each other's rename. The new contract: server-side title is the
+      // source of truth, client-side localStorage is never used to initialise
+      // a freshly opened tab.
       window.localStorage.setItem(
         'codehelm:tab-aliases',
         JSON.stringify({ 'resume:abc': 'saved alias' }),
@@ -183,10 +187,12 @@ describe('terminal-slice', () => {
       const id = useTerminalStore
         .getState()
         .openTab({ cwd: '/a', title: 'default title', aliasKey: 'resume:abc' })!;
-      expect(useTerminalStore.getState().tabs.find((t) => t.id === id)?.title).toBe('saved alias');
+      expect(useTerminalStore.getState().tabs.find((t) => t.id === id)?.title).toBe(
+        'default title',
+      );
     });
 
-    it('falls back to cfg.title when no alias is stored', () => {
+    it('uses cfg.title when no alias is stored either', () => {
       const id = useTerminalStore
         .getState()
         .openTab({ cwd: '/a', title: 'default title', aliasKey: 'resume:xyz' })!;
